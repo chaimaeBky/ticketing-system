@@ -8,13 +8,14 @@ import {
 } from 'react-router-dom';
 
 import Login from './pages/login';
-
+import DashboardClient from './pages/ClientPages/DashboardClient';
 const App = () => {
 
   const router = createBrowserRouter(
     createRoutesFromElements(
       <Route>
-        <Route path='/' element={<Login/>} /> 
+        <Route path='/' element={<Login/>} />
+        <Route path='/client/dashboard' element={<DashboardClient/>} /> 
       </Route>
         
   ));

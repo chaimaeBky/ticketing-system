@@ -1,0 +1,133 @@
+/* Dashboard.css */
+
+.dashboard-container {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.dashboard-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.05;
+  z-index: -1;
+}
+
+.map-pattern {
+  background-image: url('./assets/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  height: 100vh;
+}
+
+.map-shape {
+  position: absolute;
+  background-color: #d1d5db;
+  border-radius: 8px;
+  opacity: 0.1;
+}
+
+.map-shape-1 {
+  top: 80px;
+  left: 40px;
+  width: 128px;
+  height: 160px;
+  transform: rotate(12deg);
+}
+
+.map-shape-2 {
+  bottom: 80px;
+  right: 40px;
+  width: 160px;
+  height: 128px;
+  transform: rotate(-6deg);
+}
+
+.map-shape-3 {
+  top: 50%;
+  left: 25%;
+  width: 96px;
+  height: 144px;
+  transform: rotate(45deg);
+  opacity: 0.08;
+}
+
+/* Custom scrollbar for ticket list */
+.max-h-96::-webkit-scrollbar {
+  width: 6px;
+}
+
+.max-h-96::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.max-h-96::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.max-h-96::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Loading animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Text line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Hover effects */
+.ticket-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(238, 231, 231, 0);
+}
+
+/* Button hover effects */
+.btn-primary {
+  background-color: #991b1b;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background-color: #7f1d1d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(153, 27, 27, 0.3);
+}
+
+/* Statistics cards */
+.stat-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-background .map-shape {
+    display: none;
+  }
+}
