@@ -9,6 +9,12 @@ import {
 
 import Login from './pages/login';
 import DashboardClient from './pages/ClientPages/DashboardClient';
+import Register from './pages/Register';
+import Client from './pages/Client';
+import Technicien from './pages/Technicien';
+import Admin from './pages/Admin';
+
+
 const App = () => {
 
   const router = createBrowserRouter(
@@ -16,6 +22,13 @@ const App = () => {
       <Route>
         <Route path='/' element={<Login/>} />
         <Route path='/client/dashboard' element={<DashboardClient/>} /> 
+        <Route path='/' element={<Login/>} /> 
+        <Route path='/register' element={<Register/>} /> 
+        <Route path='/client' element={<Client/>} /> 
+        <Route path='/admin' element={<Admin/>} /> 
+        <Route path='/technicien' element={<Technicien/>} /> 
+
+
       </Route>
         
   ));

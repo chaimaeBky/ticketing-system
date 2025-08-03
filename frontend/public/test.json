@@ -1,0 +1,10 @@
+{
+    "users":[
+            {"id" : "1" , 
+            "nom" : "chaimae",
+            "email" : "chaimae@gmail.com",
+            "password" :"123" ,
+            "role": "client"
+            }
+        ]
+}
