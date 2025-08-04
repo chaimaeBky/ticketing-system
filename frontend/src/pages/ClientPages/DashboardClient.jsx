@@ -3,30 +3,41 @@ import NavBarClient from '../../components/NavBarClient';
 import TicketCard from '../../components/TicketCard';
 import '../../ClientCSS/Dashboard.css';
 import '../../background.css'; 
+import { useNavigate } from 'react-router-dom';
+
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch tickets from backend
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const response = await fetch('/api/tickets');
-        const data = await response.json();
-        setTickets(data.tickets || []);
-      } catch (error) {
-        console.error('Erreur lors du chargement des tickets:', error);
-      } finally {
-        setLoading(false);
+ // Dans le useEffect de Dashboard.js
+useEffect(() => {
+  const fetchTickets = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/tickets');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      const data = await response.json();
+      if (data.success) {
+        setTickets(data.tickets || []);
+      } else {
+        console.error('Erreur API:', data.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchTickets();
-  }, []);
+  fetchTickets();
+}, []);
 
   // Get recent tickets (last 5)
-  const recentTickets = tickets.slice(0, 5);
+  const recentTickets = tickets.slice(0, 2);
 
   // Handlers
   const handleNewTicket = () => {
@@ -40,9 +51,9 @@ const Dashboard = () => {
   };
 
   const handleViewDetails = (ticketId) => {
-    // Navigate to ticket details
-    console.log('Voir détails du ticket:', ticketId);
-  };
+  // Navigate to ticket details page
+  navigate(`/client/ticket/${ticketId}`);
+};
 
   if (loading) {
     return (
@@ -81,34 +92,35 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Section tickets récents centrée */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Les tickets récents :
-            </h2>
+{/* Section tickets récents avec layout horizontal */}
+<div className="mb-8">
+  <div className="flex items-start gap-6">
+    {/* Titre à gauche */}
+    <div className="flex-shrink-0 pt-2">
+      <h2 className="text-xl font-semibold text-gray-800">
+        Les tickets récents :
+      </h2>
+    </div>
+    
+    {/* Liste des tickets à droite */}
+    <div className="flex-1 space-y-4">
+      {recentTickets.length > 0 ? (
+        recentTickets.map((ticket) => (
+          <div key={ticket.id}>
+            <TicketCard
+              ticket={ticket}
+              onViewDetails={handleViewDetails}
+            />
           </div>
-          
-          {/* Liste des tickets centrée */}
-          <div className="space-y-4 mb-8">
-            {recentTickets.length > 0 ? (
-              recentTickets.map((ticket) => (
-                <div key={ticket.id} className="flex justify-center">
-                  <div className="w-full max-w-2xl">
-                    <TicketCard
-                      ticket={ticket}
-                      onViewDetails={handleViewDetails}
-                    />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex justify-center">
-                <div className="bg-white border border-gray-200 rounded-lg p-6 text-center max-w-md">
-                  <p className="text-gray-500">Aucun ticket trouvé</p>
-                </div>
-              </div>
-            )}
-          </div>
+        ))
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+          <p className="text-gray-500">Aucun ticket trouvé</p>
+        </div>
+      )}
+    </div>
+  </div>
+</div>
 
           {/* Bouton centré */}
           <div className="text-center">
