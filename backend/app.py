@@ -6,17 +6,29 @@ from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 import logging
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+
 
 app = Flask(__name__)
 CORS(app) 
-
 def connect_db():
-    return psycopg2.connect(
-        host="localhost",
-        database="TicketingSystemDB",
-        user="postgres",
-        password="ROOT"
-    )
+    """Fonction de compatibilité pour l'ancien code"""
+    return get_db_connection()
+
+def get_db_connection():
+    """Établit une connexion à la base de données PostgreSQL"""
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="TicketingSystemDB",  # Même nom que dans connect_db()
+            user="postgres",
+            password="ROOT"
+        )
+        return conn
+    except psycopg2.Error as e:
+        logger.error(f"Erreur de connexion à la base de données: {e}")
+        return None
 
 @app.route('/', methods=['POST'])
 def login():
@@ -376,5 +388,392 @@ def health_check():
 ##################################
 #####################################"
 #--------------END_DashboardClientAPI--------------#######
+
+
+##################################
+#####################################"
+#--------------CreationeTichetAPI--------------#######
+@app.route('/api/tickets', methods=['POST'])
+def create_ticket():
+    """Crée un nouveau ticket"""
+    logger.info("Début de la création d'un nouveau ticket")
+    
+    conn = get_db_connection()
+    if not conn:
+        logger.error("Impossible de se connecter à la base de données")
+        return jsonify({'error': 'Erreur de connexion à la base de données'}), 500
+    
+    cursor = None
+    try:
+        # Log des données reçues
+        logger.info(f"Données du formulaire reçues: {dict(request.form)}")
+        logger.info(f"Fichiers reçus: {list(request.files.keys())}")
+        
+        # Récupération des données du formulaire
+        sujet = request.form.get('sujet')
+        type_ticket = request.form.get('type')
+        description = request.form.get('description')
+        
+        logger.info(f"Données extraites - Sujet: {sujet}, Type: {type_ticket}, Description: {description[:50]}...")
+        
+        # Validation des champs obligatoires
+        if not sujet or not type_ticket or not description:
+            logger.warning("Champs obligatoires manquants")
+            return jsonify({'error': 'Tous les champs obligatoires doivent être remplis'}), 400
+        
+        # Validation que le sujet est dans les valeurs autorisées (selon votre ENUM)
+        sujet_autorises = ['livraison', 'paiement', 'bug', 'retour', 'autre']
+        if sujet not in sujet_autorises:
+            logger.warning(f"Sujet non autorisé: {sujet}")
+            return jsonify({'error': 'Sujet non autorisé'}), 400
+        
+        # Validation que le type est dans les valeurs autorisées
+        types_autorises = [
+            'probleme_livraison', 'incident_transport', 'conteneur', 
+            'stockage', 'facturation_paiement', 'reclamation_client', 
+            'probleme_technique'
+        ]
+        if type_ticket not in types_autorises:
+            logger.warning(f"Type non autorisé: {type_ticket}")
+            return jsonify({'error': 'Type non autorisé'}), 400
+        
+        logger.info("Début de l'insertion en base de données")
+        cursor = conn.cursor()
+        
+        # Récupération d'un client UUID existant (premier client trouvé)
+        # À remplacer plus tard par l'UUID de l'utilisateur connecté
+        cursor.execute("SELECT id FROM utilisateur WHERE role = 'client' LIMIT 1")
+        client_result = cursor.fetchone()
+        
+        if not client_result:
+            logger.error("Aucun client trouvé dans la base de données")
+            return jsonify({'error': 'Aucun client disponible'}), 400
+        
+        client_id = client_result[0]
+        logger.info(f"Utilisation du client_id: {client_id}")
+        
+        # Insertion du ticket dans la base de données
+        # Note: L'état par défaut 'FERME' selon votre ENUM (en majuscules)
+        insert_query = """
+        INSERT INTO ticket (sujet, description, type, etat, date_creation, client_id)
+        VALUES (%s, %s, %s, 'FERME', NOW(), %s)
+        RETURNING id, date_creation
+        """
+        
+        logger.info("Exécution de la requête d'insertion")
+        cursor.execute(insert_query, (sujet, description, type_ticket, client_id))
+        
+        # Récupération de l'ID du ticket créé
+        new_ticket = cursor.fetchone()
+        if not new_ticket:
+            logger.error("Échec de l'insertion du ticket")
+            return jsonify({'error': 'Échec de la création du ticket'}), 500
+            
+        ticket_id = new_ticket[0]
+        date_creation = new_ticket[1]
+        
+        logger.info(f"Ticket inséré avec l'ID: {ticket_id}")
+        
+        # Gestion des pièces jointes
+        pieces_jointes = request.files.getlist('pieces_jointes')
+        if pieces_jointes and pieces_jointes[0].filename:
+            logger.info(f"Traitement de {len(pieces_jointes)} pièce(s) jointe(s) pour le ticket {ticket_id}")
+            
+            # Créer un dossier pour les fichiers si nécessaire
+            upload_folder = f"uploads/tickets/{ticket_id}"
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            for file in pieces_jointes:
+                if file.filename:
+                    # Sécuriser le nom du fichier
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"{timestamp}_{filename}"
+                    
+                    # Chemin complet du fichier
+                    file_path = os.path.join(upload_folder, filename)
+                    
+                    try:
+                        # Sauvegarder le fichier
+                        file.save(file_path)
+                        
+                        # Enregistrer en base de données
+                        cursor.execute("""
+                            INSERT INTO piece_jointe (nom, chemin, ticket_id)
+                            VALUES (%s, %s, %s)
+                        """, (file.filename, file_path, ticket_id))
+                        
+                        logger.info(f"Fichier sauvegardé: {file_path}")
+                        
+                    except Exception as e:
+                        logger.error(f"Erreur lors de la sauvegarde du fichier {filename}: {e}")
+                        # Continue avec les autres fichiers même si un échoue
+        
+        # Validation de l'insertion
+        conn.commit()
+        logger.info(f"Ticket créé avec succès - ID: {ticket_id}, Client: {client_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ticket créé avec succès',
+            'ticket': {
+                'id': ticket_id,
+                'sujet': sujet,
+                'type': type_ticket,
+                'description': description,
+                'etat': 'OUVERT',
+                'date_creation': date_creation.isoformat() if date_creation else None,
+                'client_id': str(client_id)
+            }
+        }), 201
+        
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Erreur PostgreSQL lors de la création du ticket: {e}")
+        logger.error(f"Code d'erreur: {e.pgcode}")
+        return jsonify({'error': f'Erreur de base de données: {str(e)}'}), 500
+    
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Erreur inattendue lors de la création du ticket: {e}")
+        logger.error(f"Type d'erreur: {type(e).__name__}")
+        return jsonify({'error': f'Erreur inattendue: {str(e)}'}), 500
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+        logger.info("Fin du traitement de création de ticket")
+
+##################################
+#####################################"
+#--------------EndCreationeTichetAPI--------------#######
+
+# #-------importerLesPieceJoint--------------#
+
+# # ========== NOUVELLES ROUTES POUR LES PIECES JOINTES ==========
+
+# @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['GET'])
+# def get_ticket_attachments(ticket_id):
+#     """Récupère les pièces jointes d'un ticket"""
+#     conn = get_db_connection()
+#     if not conn:
+#         return jsonify({'error': 'Erreur de connexion à la base de données'}), 500
+    
+#     try:
+#         cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+#         cursor.execute("SELECT id FROM ticket WHERE id = %s", (ticket_id,))
+#         if not cursor.fetchone():
+#             return jsonify({'error': 'Ticket non trouvé'}), 404
+        
+#         cursor.execute("""
+#             SELECT id, nom, chemin, date_upload 
+#             FROM piece_jointe 
+#             WHERE ticket_id = %s 
+#             ORDER BY date_upload DESC
+#         """, (ticket_id,))
+        
+#         attachments = cursor.fetchall()
+        
+#         return jsonify({
+#             'success': True,
+#             'attachments': [dict(attachment) for attachment in attachments]
+#         })
+        
+#     except psycopg2.Error as e:
+#         logger.error(f"Erreur lors de la récupération des pièces jointes: {e}")
+#         return jsonify({'error': 'Erreur lors de la récupération des pièces jointes'}), 500
+    
+#     finally:
+#         cursor.close()
+#         conn.close()
+
+# @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['POST'])
+# def add_ticket_attachments(ticket_id):
+#     """Ajoute des pièces jointes à un ticket existant"""
+#     logger.info(f"Ajout de pièces jointes au ticket {ticket_id}")
+    
+#     conn = get_db_connection()
+#     if not conn:
+#         return jsonify({'error': 'Erreur de connexion à la base de données'}), 500
+    
+#     cursor = None
+#     try:
+#         cursor = conn.cursor()
+        
+#         cursor.execute("SELECT id FROM ticket WHERE id = %s", (ticket_id,))
+#         if not cursor.fetchone():
+#             return jsonify({'error': 'Ticket non trouvé'}), 404
+        
+#         if 'files' not in request.files:
+#             return jsonify({'error': 'Aucun fichier fourni'}), 400
+        
+#         files = request.files.getlist('files')
+#         if not files or files[0].filename == '':
+#             return jsonify({'error': 'Aucun fichier sélectionné'}), 400
+        
+#         upload_folder = os.path.join(os.getcwd(), 'uploads', 'tickets', str(ticket_id))
+#         os.makedirs(upload_folder, exist_ok=True)
+        
+#         uploaded_files = []
+        
+#         for file in files:
+#             if file.filename:
+#                 filename = secure_filename(file.filename)
+#                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+#                 unique_filename = f"{timestamp}_{filename}"
+#                 file_path = os.path.join(upload_folder, unique_filename)
+                
+#                 try:
+#                     file.save(file_path)
+                    
+#                     cursor.execute("""
+#                         INSERT INTO piece_jointe (nom, chemin, ticket_id, date_upload)
+#                         VALUES (%s, %s, %s, NOW())
+#                         RETURNING id, date_upload
+#                     """, (file.filename, file_path, ticket_id))
+                    
+#                     result = cursor.fetchone()
+#                     uploaded_files.append({
+#                         'id': result[0],
+#                         'nom': file.filename,
+#                         'chemin': file_path,
+#                         'date_upload': result[1].isoformat()
+#                     })
+                    
+#                 except Exception as e:
+#                     logger.error(f"Erreur fichier {filename}: {e}")
+#                     continue
+        
+#         conn.commit()
+        
+#         return jsonify({
+#             'success': True,
+#             'message': f'{len(uploaded_files)} fichier(s) ajouté(s)',
+#             'files': uploaded_files
+#         }), 201
+        
+#     except Exception as e:
+#         if conn:
+#             conn.rollback()
+#         logger.error(f"Erreur: {e}")
+#         return jsonify({'error': str(e)}), 500
+    
+#     finally:
+#         if cursor:
+#             cursor.close()
+#         if conn:
+#             conn.close()
+
+# @app.route('/api/tickets/<int:ticket_id>/attachments/<int:attachment_id>/download', methods=['GET'])
+# def download_attachment(ticket_id, attachment_id):
+#     """Télécharge une pièce jointe"""
+#     conn = get_db_connection()
+#     if not conn:
+#         return jsonify({'error': 'Erreur de connexion'}), 500
+    
+#     try:
+#         cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+#         cursor.execute("""
+#             SELECT nom, chemin 
+#             FROM piece_jointe 
+#             WHERE id = %s AND ticket_id = %s
+#         """, (attachment_id, ticket_id))
+        
+#         attachment = cursor.fetchone()
+#         if not attachment:
+#             return jsonify({'error': 'Fichier non trouvé'}), 404
+        
+#         if not os.path.exists(attachment['chemin']):
+#             return jsonify({'error': 'Fichier manquant sur serveur'}), 404
+        
+#         directory = os.path.dirname(attachment['chemin'])
+#         filename = os.path.basename(attachment['chemin'])
+        
+#         return send_from_directory(
+#             directory, 
+#             filename, 
+#             as_attachment=True,
+#             download_name=attachment['nom']
+#         )
+        
+#     except Exception as e:
+#         logger.error(f"Erreur téléchargement: {e}")
+#         return jsonify({'error': 'Erreur téléchargement'}), 500
+    
+#     finally:
+#         cursor.close()
+#         conn.close()
+# # ========== FIN NOUVELLES ROUTES ==========
+
+# #-----------------
+# @app.route('/api/tickets/<int:ticket_id>', methods=['GET'])
+# def get_ticket_by_id(ticket_id):
+#     """Récupère un ticket spécifique par son ID avec ses pièces jointes"""
+#     conn = get_db_connection()
+#     if not conn:
+#         return jsonify({'error': 'Erreur de connexion à la base de données'}), 500
+    
+#     try:
+#         cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+#         query = """
+#         SELECT 
+#             t.id,
+#             t.sujet,
+#             t.description,
+#             t.type,
+#             t.etat,
+#             t.date_creation,
+#             t.date_resolution,
+#             t.client_id,
+#             t.technicien_id,
+#             c.nom as client_nom,
+#             c.email as client_email,
+#             tech.nom as technicien_nom
+#         FROM ticket t
+#         LEFT JOIN utilisateur c ON t.client_id = c.id
+#         LEFT JOIN utilisateur tech ON t.technicien_id = tech.id
+#         WHERE t.id = %s
+#         """
+        
+#         cursor.execute(query, (ticket_id,))
+#         ticket_data = cursor.fetchone()
+        
+#         if not ticket_data:
+#             return jsonify({'error': 'Ticket non trouvé'}), 404
+        
+#         # Récupérer les pièces jointes
+#         cursor.execute("""
+#             SELECT id, nom, date_upload 
+#             FROM piece_jointe 
+#             WHERE ticket_id = %s 
+#             ORDER BY date_upload DESC
+#         """, (ticket_id,))
+#         attachments = cursor.fetchall()
+        
+#         ticket = format_ticket_data(ticket_data)
+#         ticket['pieces_jointes'] = [dict(att) for att in attachments]
+        
+#         return jsonify({
+#             'success': True,
+#             'ticket': ticket
+#         })
+        
+#     except psycopg2.Error as e:
+#         logger.error(f"Erreur lors de la récupération du ticket {ticket_id}: {e}")
+#         return jsonify({'error': 'Erreur lors de la récupération du ticket'}), 500
+    
+#     finally:
+#         cursor.close()
+#         conn.close()
+
+# #------------------
+
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

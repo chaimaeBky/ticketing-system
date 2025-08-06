@@ -40,10 +40,9 @@ useEffect(() => {
   const recentTickets = tickets.slice(0, 2);
 
   // Handlers
-  const handleNewTicket = () => {
-    // Redirect to new ticket form or open modal
-    console.log('Créer nouveau ticket');
-  };
+ const handleNewTicket = () => {
+  navigate('/client/create-ticket');
+};
 
   const handleLogout = () => {
     // Handle logout logic

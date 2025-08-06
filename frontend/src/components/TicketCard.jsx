@@ -8,7 +8,7 @@ const TicketCard = ({ ticket, onViewDetails }) => {
   };
 
   return (
-    <div className="ticket-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+<div className="ticket-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full max-w-2xl mx-auto">
       <div className="space-y-2">
         {/* Numéro de ticket */}
        <div>

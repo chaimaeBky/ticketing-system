@@ -134,7 +134,7 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
             <button 
               onClick={handleBackToDashboard}
 className="text-lg font-bold" style={{ color: '#8f1630' }}            >
-              ← Retour au Dashboard
+              ← Retour 
             </button>
           </div>
 

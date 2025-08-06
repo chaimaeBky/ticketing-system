@@ -100,3 +100,11 @@ CREATE TABLE piece_jointe (
 
 -- Index utile
 CREATE INDEX idx_piece_jointe_ticket ON piece_jointe(ticket_id);
+
+
+------------des ajouts----------------
+ Ajoutez la colonne date_upload à la table piece_jointe existante
+ALTER TABLE piece_jointe ADD COLUMN date_upload TIMESTAMP DEFAULT NOW();
+
+-- Mettez à jour les enregistrements existants (si il y en a)
+UPDATE piece_jointe SET date_upload = NOW() WHERE date_upload IS NULL;-
