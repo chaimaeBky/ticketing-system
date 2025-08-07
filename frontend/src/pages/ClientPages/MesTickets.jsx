@@ -112,7 +112,7 @@ const MesTickets = () => {
           <h1 className="text-3xl font-bold text-red-800 mb-2">
             Mes tickets
           </h1>
-          <p className="text-1xl font-bold text-gray-600 mb-1">
+          <p className="text-2xl font-bold text-gray-600 mb-1">
             Consultez l'historique de vos demandes et réclamations
           </p>
         </div>

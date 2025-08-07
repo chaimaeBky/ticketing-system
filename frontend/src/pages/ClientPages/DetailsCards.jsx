@@ -51,25 +51,116 @@ const DetailsCards = () => {
   };
 
   // Handle file upload
-  const handleFileUpload = (event) => {
-    const files = event.target.files;
-    if (files.length > 0) {
-      console.log('Fichiers sélectionnés:', files);
-      // Ici vous pouvez implémenter l'upload vers le serveur
-      alert(`${files.length} fichier(s) sélectionné(s) pour upload`);
-    }
-  };
+  // Handler pour l'upload de fichiers
+const handleFileUpload = async (event) => {
+  const files = event.target.files;
+  if (files.length === 0) return;
 
-  // Handle download attachments
-  const handleDownloadAttachments = () => {
-    if (ticket?.pieces_jointes && ticket.pieces_jointes.length > 0) {
-      console.log('Téléchargement des pièces jointes:', ticket.pieces_jointes);
-      // Implémenter le téléchargement
-      alert('Téléchargement des pièces jointes...');
-    } else {
-      alert('Aucune pièce jointe disponible');
+  try {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('file', files[i]);
     }
-  };
+
+    const response = await fetch(`/api/tickets/${ticketId}/attachments`, {
+      method: 'POST',
+      body: formData,
+      // Note: Ne pas mettre 'Content-Type' header, le navigateur le fera automatiquement
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Rafraîchir les données du ticket
+      const ticketResponse = await fetch(`/api/tickets/${ticketId}`);
+      const ticketData = await ticketResponse.json();
+      setTicket(ticketData.ticket);
+      alert('Fichier(s) uploadé(s) avec succès');
+    } else {
+      throw new Error(data.error || 'Erreur lors de l\'upload');
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert(error.message);
+  }
+};
+
+// Handler pour le téléchargement avec meilleure gestion d'erreurs
+const handleDownloadAttachments = async () => {
+  try {
+    // 1. Vérification de la connexion
+    const healthCheck = await fetch('http://localhost:5000/api/health');
+    if (!healthCheck.ok) throw new Error("Serveur indisponible");
+
+    // 2. Récupération des pièces jointes
+    const res = await fetch(`http://localhost:5000/api/tickets/${ticketId}/attachments`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Échec de la requête");
+    }
+
+    const { attachments } = await res.json();
+    if (!attachments?.length) {
+      alert("Aucune pièce jointe disponible");
+      return;
+    }
+
+    // 3. Téléchargement séquentiel
+    for (const att of attachments) {
+      try {
+        const fileRes = await fetch(
+          `http://localhost:5000/api/tickets/${ticketId}/attachments/${att.id}`
+        );
+        
+        if (!fileRes.ok) {
+          console.error(`Échec pour ${att.id}: ${fileRes.statusText}`);
+          continue;
+        }
+
+        // Gestion du nom de fichier
+        const filename = att.nom || `piece_jointe_${att.id}`;
+        const blob = await fileRes.blob();
+        
+        // Création du lien de téléchargement
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+        
+      } catch (fileError) {
+        console.error(`Erreur sur ${att.id}:`, fileError);
+      }
+    }
+
+  } catch (err) {
+    console.error("Erreur globale:", err);
+    alert(`Erreur : ${err.message}`);
+  }
+};
+
+// Fonction utilitaire pour tester la connexion au serveur
+const testServerConnection = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/tickets');
+    if (response.ok) {
+      console.log('✓ Serveur Flask accessible');
+      return true;
+    } else {
+      console.error('✗ Serveur Flask retourne une erreur:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('✗ Impossible de contacter le serveur Flask:', error);
+    return false;
+  }
+};
 
   // Handlers
   const handleNewTicket = () => {
@@ -206,16 +297,15 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
                     />
                     <label
                       htmlFor="fileUpload"
-              className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-900 transition-colors font-medium text-lg shadow-lg"
-                    >
+className="w-full bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-900 transition-colors font-medium text-lg shadow-lg text-center block cursor-pointer"                    >
                       Ajouter pièces jointes
                     </label>
                   </div>
 
                   {/* Download button */}
-                  {/* <button
+                  <button
                     onClick={handleDownloadAttachments}
-                    className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-900 transition-colors font-medium text-lg shadow-lg"
                   >
                     Télécharger pièces jointes
                     {ticket.pieces_jointes && ticket.pieces_jointes.length > 0 && (
@@ -223,7 +313,7 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
                         {ticket.pieces_jointes.length}
                       </span>
                     )}
-                  </button> */}
+                  </button>
                 </div>
 
                 {/* Liste des pièces jointes existantes */}
