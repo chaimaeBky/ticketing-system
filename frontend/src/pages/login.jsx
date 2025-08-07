@@ -42,11 +42,11 @@ const Login = () => {
 
 
   return (
-    <div className="bg-custom min-h-screen w-full">
+    <div className=" min-h-screen w-full">
       
       <div className="w-full flex justify-center">
         <img
-          src="../src/assets/images/logo.jpg"
+          src="../src/assets/images/logo.png"
           alt="Logo"
           className="w-50 h-auto mt-0"
         />

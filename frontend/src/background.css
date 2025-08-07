@@ -1,6 +1,10 @@
-.bg-custom {
-  background-image: url('./assets/images/background.jpg');
+body {
+  background-image: url('./assets/images/background.jpg'); /* Mets le bon chemin */
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  margin: 0;
+  padding: 0;
   height: 100vh;
 }
