@@ -23,7 +23,7 @@ const Login = () => {
         const role = res.data.user.role ; 
 
         if (role === 'client')
-           navigate('/client') ; 
+           navigate('/client/dashboard') ; 
         else if ( role === 'admin')
            navigate('/admin')
         else if ( role === 'technicien')
