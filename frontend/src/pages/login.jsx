@@ -20,7 +20,10 @@ const Login = () => {
         console.log({ email, password });
       try {
         const res =  await axios.post('http://localhost:5000/' , {email , password}) ; 
-        const role = res.data.user.role ; 
+        const role = res.data.user.role ;
+        
+        // ✅ Stocke l'utilisateur connecté dans localStorage 
+        localStorage.setItem('user', JSON.stringify(res.data.user));
 
         if (role === 'client')
            navigate('/client/dashboard') ; 

@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 # Vous pouvez choisir entre les deux configurations selon vos besoins
 DB_CONFIG = {
     'host': 'localhost',
-    'database': 'TicketingSystemDB',  # Changé pour correspondre au premier code
+    'database': 'postgres',  # Changé pour correspondre au premier code
     'user': 'postgres',
-    'password': 'postgres'  # Changé pour correspondre au premier code
+    'password': 'ROOT'  # Changé pour correspondre au premier code
 }
 
 def get_db_connection():
@@ -602,7 +602,7 @@ def get_tickets_stats():
         cursor.close()
         conn.close()
 
-# ========== CRÉATION DE TICKETS ==========
+# ========== CRÉATION DE TICKETS (VERSION CORRIGÉE) ==========
 
 @app.route('/api/tickets', methods=['POST'])
 def create_ticket():
@@ -624,12 +624,27 @@ def create_ticket():
         type_ticket = request.form.get('type')
         description = request.form.get('description')
         
-        logger.info(f"Données extraites - Sujet: {sujet}, Type: {type_ticket}, Description: {description[:50] if description else 'None'}...")
+        # 🔥 CORRECTION 1: Récupérer le client_id depuis le formulaire
+        client_id = request.form.get('client_id')
+        
+        logger.info(f"Données extraites - Sujet: {sujet}, Type: {type_ticket}, Client_ID: {client_id}")
+        logger.info(f"Description: {description[:50] if description else 'None'}...")
         
         # Validation des champs obligatoires
-        if not sujet or not type_ticket or not description:
+        if not sujet or not type_ticket or not description or not client_id:
             logger.warning("Champs obligatoires manquants")
             return jsonify({'error': 'Tous les champs obligatoires doivent être remplis'}), 400
+        
+        # 🔥 CORRECTION 2: Vérifier que le client existe
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM utilisateur WHERE id = %s AND role = 'client'", (client_id,))
+        client_result = cursor.fetchone()
+        
+        if not client_result:
+            logger.error(f"Client non trouvé avec ID: {client_id}")
+            return jsonify({'error': 'Client non trouvé'}), 404
+        
+        logger.info(f"Client validé: {client_id}")
         
         # Validation que le sujet est dans les valeurs autorisées
         sujet_autorises = ['livraison', 'paiement', 'bug', 'retour', 'autre']
@@ -648,24 +663,12 @@ def create_ticket():
             return jsonify({'error': 'Type non autorisé'}), 400
         
         logger.info("Début de l'insertion en base de données")
-        cursor = conn.cursor()
         
-        # Récupération d'un client UUID existant (premier client trouvé)
-        cursor.execute("SELECT id FROM utilisateur WHERE role = 'client' LIMIT 1")
-        client_result = cursor.fetchone()
-        
-        if not client_result:
-            logger.error("Aucun client trouvé dans la base de données")
-            return jsonify({'error': 'Aucun client disponible'}), 400
-        
-        client_id = client_result[0]
-        logger.info(f"Utilisation du client_id: {client_id}")
-        
-        # Insertion du ticket dans la base de données
+        # 🔥 CORRECTION 3: Créer le ticket avec l'état OUVERT au lieu de FERME
         insert_query = """
         INSERT INTO ticket (sujet, description, type, etat, date_creation, client_id)
         VALUES (%s, %s, %s, 'FERME', NOW(), %s)
-        RETURNING id, date_creation
+        RETURNING id, date_creation, etat
         """
         
         logger.info("Exécution de la requête d'insertion")
@@ -679,10 +682,11 @@ def create_ticket():
             
         ticket_id = new_ticket[0]
         date_creation = new_ticket[1]
+        etat = new_ticket[2]
         
-        logger.info(f"Ticket inséré avec l'ID: {ticket_id}")
+        logger.info(f"Ticket inséré avec l'ID: {ticket_id}, État: {etat}")
         
-        # Gestion des pièces jointes
+        # Gestion des pièces jointes (code inchangé)
         pieces_jointes = request.files.getlist('pieces_jointes')
         if pieces_jointes and pieces_jointes[0].filename:
             logger.info(f"Traitement de {len(pieces_jointes)} pièce(s) jointe(s) pour le ticket {ticket_id}")
@@ -718,21 +722,66 @@ def create_ticket():
         
         # Validation de l'insertion
         conn.commit()
-        logger.info(f"Ticket créé avec succès - ID: {ticket_id}, Client: {client_id}")
+        logger.info(f"✅ Ticket créé avec succès - ID: {ticket_id}, Client: {client_id}, État: {etat}")
         
-        return jsonify({
-            'success': True,
-            'message': 'Ticket créé avec succès',
-            'ticket': {
-                'id': ticket_id,
-                'sujet': sujet,
-                'type': type_ticket,
-                'description': description,
-                'etat': 'FERME',
-                'date_creation': date_creation.isoformat() if date_creation else None,
-                'client_id': str(client_id)
+        # 🔥 CORRECTION 4: Récupérer les données complètes du ticket créé
+        cursor.execute("""
+        SELECT 
+            t.id,
+            t.sujet,
+            t.description,
+            t.type,
+            t.etat,
+            t.date_creation,
+            t.date_resolution,
+            t.client_id,
+            t.technicien_id,
+            c.nom as client_nom,
+            c.email as client_email
+        FROM ticket t
+        LEFT JOIN utilisateur c ON t.client_id = c.id
+        WHERE t.id = %s
+        """, (ticket_id,))
+        
+        ticket_complet = cursor.fetchone()
+        
+        if ticket_complet:
+            # Formatage des données comme dans votre fonction format_ticket_data
+            ticket_data = {
+                'id': ticket_complet[0],
+                'sujet': ticket_complet[1],
+                'description': ticket_complet[2],
+                'type': ticket_complet[3],
+                'etat': ticket_complet[4],
+                'date_creation': ticket_complet[5].isoformat() if ticket_complet[5] else None,
+                'date_resolution': ticket_complet[6].isoformat() if ticket_complet[6] else None,
+                'client_id': str(ticket_complet[7]),
+                'technicien_id': str(ticket_complet[8]) if ticket_complet[8] else None,
+                'client_nom': ticket_complet[9],
+                'client_email': ticket_complet[10],
+                'technicien_nom': None
             }
-        }), 201
+            
+            return jsonify({
+                'success': True,
+                'message': 'Ticket créé avec succès',
+                'ticket': ticket_data
+            }), 201
+        else:
+            # Fallback si la requête complète échoue
+            return jsonify({
+                'success': True,
+                'message': 'Ticket créé avec succès',
+                'ticket': {
+                    'id': ticket_id,
+                    'sujet': sujet,
+                    'type': type_ticket,
+                    'description': description,
+                    'etat': etat,
+                    'date_creation': date_creation.isoformat() if date_creation else None,
+                    'client_id': str(client_id)
+                }
+            }), 201
         
     except psycopg2.Error as e:
         if conn:
@@ -752,7 +801,6 @@ def create_ticket():
         if conn:
             conn.close()
         logger.info("Fin du traitement de création de ticket")
-
 # ========== GESTION DES PIÈCES JOINTES ==========
 
 @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['POST'])
@@ -812,42 +860,64 @@ def upload_attachment(ticket_id):
 
 @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['GET'])
 def get_ticket_attachments(ticket_id):
+    """Récupère la liste des pièces jointes d'un ticket"""
     conn = None
     cur = None
     try:
+        logger.info(f"🔍 Récupération des pièces jointes pour le ticket {ticket_id}")
+        
         # Validation de l'ID
         if not isinstance(ticket_id, int) or ticket_id <= 0:
+            logger.warning(f"ID de ticket invalide: {ticket_id}")
             return jsonify({"error": "ID de ticket invalide"}), 400
 
         conn = get_db_connection()
         if not conn:
+            logger.error("Échec de connexion à la base de données")
             return jsonify({"error": "Échec de connexion à la base"}), 500
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Requête avec vérification d'existence du ticket
+        # 🔥 CORRECTION: Utiliser seulement les colonnes qui existent
         cur.execute("""
-            SELECT pj.id, pj.nom, pj.chemin, pj.taille
+            SELECT pj.id, pj.nom, pj.chemin
             FROM piece_jointe pj
             INNER JOIN ticket t ON pj.ticket_id = t.id
             WHERE t.id = %s
-            ORDER BY pj.date_upload DESC
+            ORDER BY pj.id DESC
         """, (ticket_id,))
         
         pieces = cur.fetchall()
+        logger.info(f"📎 {len(pieces)} pièces jointes trouvées pour le ticket {ticket_id}")
         
-        # Validation des chemins
+        # Validation des chemins et calcul de la taille
         attachments = []
         for piece in pieces:
-            if not os.path.exists(piece["chemin"]):
-                logger.warning(f"Fichier introuvable: {piece['chemin']}")
-                continue
-                
-            attachments.append({
+            file_path = piece["chemin"]
+            
+            # Calculer la taille du fichier s'il existe
+            file_size = 0
+            file_exists = False
+            
+            try:
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                    file_exists = True
+                    logger.debug(f"✅ Fichier trouvé: {file_path} ({file_size} bytes)")
+                else:
+                    logger.warning(f"⚠️ Fichier introuvable: {file_path}")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de la vérification du fichier {file_path}: {e}")
+            
+            attachment_info = {
                 "id": piece["id"],
                 "nom": piece["nom"],
-                "taille": piece["taille"] if piece["taille"] else 0
-            })
+                "taille": file_size,
+                "exists": file_exists,
+                "chemin": file_path  # Pour debug, à retirer en production
+            }
+            
+            attachments.append(attachment_info)
 
         return jsonify({
             "success": True,
@@ -855,30 +925,41 @@ def get_ticket_attachments(ticket_id):
             "count": len(attachments)
         })
 
+    except psycopg2.Error as db_error:
+        logger.error(f"❌ Erreur PostgreSQL: {db_error}")
+        return jsonify({"error": f"Erreur base de données: {str(db_error)}"}), 500
     except Exception as e:
-        logger.error(f"Erreur critique: {str(e)}", exc_info=True)
-        return jsonify({"error": "Erreur interne"}), 500
+        logger.error(f"❌ Erreur critique: {str(e)}", exc_info=True)
+        return jsonify({"error": "Erreur interne du serveur"}), 500
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
+        if cur: 
+            cur.close()
+        if conn: 
+            conn.close()
+
 
 @app.route('/api/tickets/<int:ticket_id>/attachments/<int:attachment_id>', methods=['GET'])
 def download_attachment(ticket_id, attachment_id):
+    """Télécharge une pièce jointe spécifique"""
     conn = None
     cur = None
     
     try:
+        logger.info(f"📥 Téléchargement demandé - Ticket: {ticket_id}, Attachment: {attachment_id}")
+        
         # Validation des IDs
         if ticket_id <= 0 or attachment_id <= 0:
+            logger.warning(f"IDs invalides - Ticket: {ticket_id}, Attachment: {attachment_id}")
             return jsonify({'error': 'IDs invalides'}), 400
 
         conn = get_db_connection()
         if not conn:
-            return jsonify({'error': 'Database connection failed'}), 500
+            logger.error("Échec de connexion à la base de données")
+            return jsonify({'error': 'Erreur de connexion base de données'}), 500
             
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Requête sécurisée avec jointure
+        # 🔥 CORRECTION: Requête simplifiée avec les colonnes existantes
         cur.execute("""
             SELECT pj.chemin, pj.nom 
             FROM piece_jointe pj
@@ -888,32 +969,131 @@ def download_attachment(ticket_id, attachment_id):
         
         attachment = cur.fetchone()
         if not attachment:
+            logger.warning(f"Pièce jointe non trouvée - Ticket: {ticket_id}, Attachment: {attachment_id}")
             return jsonify({'error': 'Pièce jointe non trouvée'}), 404
         
-        # Chemin sécurisé
-        base_path = os.path.abspath('uploads')
-        file_path = os.path.abspath(attachment['chemin'])
+        file_path = attachment['chemin']
+        file_name = attachment['nom']
         
-        # Validation de sécurité
-        if not file_path.startswith(base_path):
-            return jsonify({'error': 'Chemin non autorisé'}), 403
-            
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'Fichier introuvable'}), 404
-            
-        return send_from_directory(
-            directory=os.path.dirname(file_path),
-            path=os.path.basename(file_path),
-            as_attachment=True,
-            download_name=secure_filename(attachment['nom'])
-        )
+        logger.info(f"📂 Fichier demandé: {file_path}")
         
+        # Vérification de sécurité du chemin
+        try:
+            base_path = os.path.abspath('uploads')
+            absolute_file_path = os.path.abspath(file_path)
+            
+            # Validation de sécurité - le fichier doit être dans uploads/
+            if not absolute_file_path.startswith(base_path):
+                logger.error(f"🚨 Tentative d'accès non autorisé: {absolute_file_path}")
+                return jsonify({'error': 'Chemin non autorisé'}), 403
+        except Exception as path_error:
+            logger.error(f"Erreur de validation du chemin: {path_error}")
+            return jsonify({'error': 'Erreur de validation du chemin'}), 400
+            
+        # Vérification de l'existence du fichier
+        if not os.path.exists(absolute_file_path):
+            logger.error(f"📂 Fichier introuvable sur le disque: {absolute_file_path}")
+            return jsonify({'error': 'Fichier introuvable sur le serveur'}), 404
+        
+        # Préparation du téléchargement
+        try:
+            directory = os.path.dirname(absolute_file_path)
+            filename = os.path.basename(absolute_file_path)
+            safe_filename = secure_filename(file_name)
+            
+            logger.info(f"✅ Envoi du fichier: {filename} -> {safe_filename}")
+            
+            return send_from_directory(
+                directory=directory,
+                path=filename,
+                as_attachment=True,
+                download_name=safe_filename
+            )
+            
+        except Exception as send_error:
+            logger.error(f"Erreur lors de l'envoi du fichier: {send_error}")
+            return jsonify({'error': 'Erreur lors de l\'envoi du fichier'}), 500
+        
+    except psycopg2.Error as db_error:
+        logger.error(f"❌ Erreur PostgreSQL lors du téléchargement: {db_error}")
+        return jsonify({'error': 'Erreur base de données'}), 500
     except Exception as e:
-        logger.error(f"Erreur téléchargement PJ {attachment_id}: {str(e)}")
+        logger.error(f"❌ Erreur critique lors du téléchargement: {str(e)}", exc_info=True)
         return jsonify({'error': 'Erreur de traitement'}), 500
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
+        if cur: 
+            cur.close()
+        if conn: 
+            conn.close()
+
+
+# 🔥 ROUTE BONUS: Télécharger toutes les pièces jointes d'un ticket dans un ZIP
+@app.route('/api/tickets/<int:ticket_id>/attachments/download-all', methods=['GET'])
+def download_all_attachments(ticket_id):
+    """Télécharge toutes les pièces jointes d'un ticket dans un fichier ZIP"""
+    import zipfile
+    import tempfile
+    
+    conn = None
+    cur = None
+    
+    try:
+        logger.info(f"📦 Téléchargement groupé demandé pour le ticket {ticket_id}")
+        
+        if ticket_id <= 0:
+            return jsonify({'error': 'ID de ticket invalide'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Erreur de connexion'}), 500
+            
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Récupérer toutes les pièces jointes
+        cur.execute("""
+            SELECT pj.nom, pj.chemin 
+            FROM piece_jointe pj
+            INNER JOIN ticket t ON pj.ticket_id = t.id
+            WHERE t.id = %s
+        """, (ticket_id,))
+        
+        attachments = cur.fetchall()
+        
+        if not attachments:
+            return jsonify({'error': 'Aucune pièce jointe trouvée'}), 404
+        
+        # Créer un fichier ZIP temporaire
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as temp_zip:
+            with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for attachment in attachments:
+                    file_path = attachment['chemin']
+                    file_name = attachment['nom']
+                    
+                    if os.path.exists(file_path):
+                        # Ajouter le fichier au ZIP avec son nom original
+                        zip_file.write(file_path, secure_filename(file_name))
+                        logger.info(f"✅ Ajouté au ZIP: {file_name}")
+                    else:
+                        logger.warning(f"⚠️ Fichier ignoré (introuvable): {file_path}")
+            
+            zip_filename = f"ticket_{ticket_id}_attachments.zip"
+            
+            # Envoyer le ZIP
+            return send_file(
+                temp_zip.name,
+                as_attachment=True,
+                download_name=zip_filename,
+                mimetype='application/zip'
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la création du ZIP: {str(e)}")
+        return jsonify({'error': 'Erreur lors de la création du ZIP'}), 500
+    finally:
+        if cur: 
+            cur.close()
+        if conn: 
+            conn.close()
 
 # ========== HEALTH CHECK ET DEBUG ==========
 

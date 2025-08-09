@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBarClient from '../../components/NavBarClient';
 import '../../ClientCSS/Dashboard.css';
@@ -16,6 +16,12 @@ const CreateTicket = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  useEffect(() => {
+  const user = localStorage.getItem('user');
+  if (!user) {
+    navigate('/login');
+  }
+}, [navigate]);
   // Options pour le sujet (ENUM sujet_ticket)
   const sujetOptions = [
     { value: '', label: 'Sélectionnez un sujet...' },
@@ -82,10 +88,21 @@ const CreateTicket = () => {
 
     try {
       // Création d'un FormData pour envoyer les fichiers
-      const formDataToSend = new FormData();
-      formDataToSend.append('sujet', formData.sujet);
-      formDataToSend.append('type', formData.type);
-      formDataToSend.append('description', formData.description);
+      // Récupérer l'utilisateur connecté
+const user = JSON.parse(localStorage.getItem('user'));
+const clientId = user?.id;
+
+if (!clientId) {
+  setError('Utilisateur non connecté. Veuillez vous reconnecter.');
+  setLoading(false);
+  return;
+}
+
+const formDataToSend = new FormData();
+formDataToSend.append('sujet', formData.sujet);
+formDataToSend.append('type', formData.type);
+formDataToSend.append('description', formData.description);
+formDataToSend.append('client_id', clientId);
       
       // Ajouter les fichiers - chaque fichier individuellement pour le backend
       if (formData.pieces_jointes.length > 0) {
@@ -102,12 +119,13 @@ const CreateTicket = () => {
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        setSuccess('Ticket créé avec succès !');
-        setTimeout(() => {
-          navigate('/client/dashboard');
-        }, 2000);
-      } else {
+if (response.ok && data.success) {
+  setSuccess('Ticket créé avec succès ! Redirection vers le tableau de bord...');
+  setTimeout(() => {
+    // Force un vrai rechargement de la page
+    window.location.href = '/client/dashboard';
+  }, 1500);
+} else {
         setError(data.error || 'Erreur lors de la création du ticket');
       }
     } catch (error) {
@@ -124,8 +142,9 @@ const CreateTicket = () => {
   };
 
   const handleLogout = () => {
-    navigate('/login');
-  };
+  localStorage.removeItem('user');
+  navigate('/login');
+};
 
   return (
     <div className="min-h-screen  dashboard-container bg-custom">

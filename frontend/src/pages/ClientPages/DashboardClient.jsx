@@ -3,38 +3,52 @@ import NavBarClient from '../../components/NavBarClient';
 import TicketCard from '../../components/TicketCard';
 import '../../ClientCSS/Dashboard.css';
 import '../../background.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch tickets from backend
  // Dans le useEffect de Dashboard.js
-useEffect(() => {
-  const fetchTickets = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/tickets');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.success) {
-        setTickets(data.tickets || []);
-      } else {
-        console.error('Erreur API:', data.error);
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des tickets:', error);
-    } finally {
-      setLoading(false);
+// Sortir fetchTickets du useEffect et la mettre AVANT
+const fetchTickets = async () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const clientId = user?.id;
+    
+    if (!clientId) {
+      console.error('Utilisateur non connecté');
+      navigate('/login');
+      return;
     }
-  };
+    
+    const response = await fetch(`http://localhost:5000/api/tickets/client/${clientId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      setTickets(data.tickets || []);
+    } else {
+      console.error('Erreur API:', data.error);
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des tickets:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
+// useEffect simplifié
+useEffect(() => {
+  setLoading(true);
   fetchTickets();
-}, []);
+}, [location.key]); // Ajouter location.key ici au lieu de []
 
   const recentTickets = tickets.slice(0, 2);
 
@@ -42,9 +56,10 @@ useEffect(() => {
   navigate('/client/create-ticket');
 };
 
-  const handleLogout = () => {
-    console.log('Déconnexion');
-  };
+ const handleLogout = () => {
+  localStorage.removeItem('user');
+  navigate('/login');
+};
 
   const handleViewDetails = (ticketId) => {
   navigate(`/client/ticket/${ticketId}`);
@@ -79,6 +94,7 @@ useEffect(() => {
         <div className="w-full max-w-4xl">
           {/* Compteur de tickets centré */}
           <div className="text-center mb-8">
+            
             <h2 className="text-2xl font-medium text-gray-700 mb-2">
               Nombre total de tickets :
             </h2>
