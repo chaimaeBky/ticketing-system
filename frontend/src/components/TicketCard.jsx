@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TicketCard = ({ ticket, onViewDetails }) => {
+const TicketCard = ({ ticket,  index, onViewDetails }) => {
   const handleViewDetails = () => {
     if (onViewDetails) {
       onViewDetails(ticket.id);
@@ -10,12 +10,12 @@ const TicketCard = ({ ticket, onViewDetails }) => {
   return (
 <div className="ticket-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full max-w-2xl mx-auto">
       <div className="space-y-2">
-        {/* Numéro de ticket */}
-       <div>
-          <span className="text-lg font-bold" style={{ color: '#8f1630' }}>
-            Ticket {ticket.id}
-          </span>
-        </div>
+      {/* Numéro de ticket */}
+      <div>
+        <span className="text-lg font-bold" style={{ color: '#8f1630' }}>
+          Ticket {index + 1}
+        </span>
+      </div>
         
         {/* Sujet du ticket */}
         <div  className="ml-4">

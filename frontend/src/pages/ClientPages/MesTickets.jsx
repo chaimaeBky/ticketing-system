@@ -340,10 +340,12 @@ const MesTickets = () => {
           </div>
         ) : (
           <div className="grid gap-6">
-            {filteredTickets.map((ticket) => (
+            {/* 🔥 CHANGEMENT ICI: Ajouter l'index pour la numérotation séquentielle */}
+            {filteredTickets.map((ticket, index) => (
               <TicketCard
                 key={ticket.id}
                 ticket={ticket}
+                index={index}  
                 onViewDetails={handleTicketClick}
               />
             ))}

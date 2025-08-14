@@ -1,49 +1,43 @@
-import React , { useState } from "react";
-import "../background.css"; 
+import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
-
-    const [email , setEmail] = useState("") ;
-    const [password , setPassword] = useState("") ;
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [message, setMessage] = useState("");
-
-
-
     const navigate = useNavigate();
 
-
-    const loginSubmit = async (e)  => {
+    const loginSubmit = async (e) => {
         e.preventDefault();
+        try {
+            const res = await axios.post('http://localhost:5000/', { email, password });
+            const user = res.data.user;
 
-        console.log({ email, password });
-      try {
-        const res =  await axios.post('http://localhost:5000/' , {email , password}) ; 
-        const role = res.data.user.role ;
-        
-        // ✅ Stocke l'utilisateur connecté dans localStorage 
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+            if (!user) {
+                setMessage('Utilisateur non trouvé');
+                return;
+            }
 
-        if (role === 'client')
-           navigate('/client/dashboard') ; 
-        else if ( role === 'admin')
-           navigate('/admin')
-        else if ( role === 'technicien')
-           navigate('/technicien')
+            localStorage.setItem('user', JSON.stringify(user));
 
-      } catch (err) {
-      if (err.response && err.response.data.error) {
-        setMessage('Email ou mot de passe incorrect !');
-      } else {
-        setMessage('Erreur inconnue');
-      }
-      }
+            if (user.role === 'technicien') {
+                localStorage.setItem('technicien_id', user.id);
+                navigate('/technicien');
+            } else if (user.role === 'admin') {
+                navigate('/admin');
+            } else if (user.role === 'client') {
+                navigate('/client/dashboard');
+            }
 
+        } catch (err) {
+            if (err.response && err.response.data.error) {
+                setMessage('Email ou mot de passe incorrect !');
+            } else {
+                setMessage('Erreur inconnue');
+            }
+        }
     }
-
-
-
   return (
     <div className=" min-h-screen w-full">
       

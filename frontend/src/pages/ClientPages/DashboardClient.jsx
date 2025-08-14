@@ -113,18 +113,19 @@ useEffect(() => {
       </h2>
     </div>
     
-    {/* Liste des tickets à droite */}
-    <div className="flex-1 space-y-4">
-      {recentTickets.length > 0 ? (
-        recentTickets.map((ticket) => (
-          <div key={ticket.id}>
-            <TicketCard
-              ticket={ticket}
-              onViewDetails={handleViewDetails}
-            />
-          </div>
-        ))
-      ) : (
+            {/* Liste des tickets à droite */}
+            <div className="flex-1 space-y-4">
+              {recentTickets.length > 0 ? (
+          recentTickets.map((ticket, index) => (
+            <div key={ticket.id}>
+              <TicketCard
+                ticket={ticket}
+                index={index} // 👈 Ajouter l'index ici
+                onViewDetails={handleViewDetails}
+              />
+            </div>
+          ))
+        ) : (
         <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
           <p className="text-gray-500">Aucun ticket trouvé</p>
         </div>

@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 # Vous pouvez choisir entre les deux configurations selon vos besoins
 DB_CONFIG = {
     'host': 'localhost',
-    'database': 'postgres',  # Changé pour correspondre au premier code
+    'database': 'TicketingSystemDB',  # Changé pour correspondre au premier code
     'user': 'postgres',
-    'password': 'ROOT'  # Changé pour correspondre au premier code
+    'password': 'postgres'  # Changé pour correspondre au premier code
 }
 
 def get_db_connection():
@@ -35,8 +35,12 @@ def get_db_connection():
         return None
 
 def connect_db():
-    """Fonction de compatibilité pour l'ancien code"""
-    return get_db_connection()
+    return psycopg2.connect(
+        host="localhost",
+        database="TicketingSystemDB",
+        user="postgres",
+        password="postgres"
+    )
 
 # ========== ROUTES D'AUTHENTIFICATION ==========
 
@@ -233,21 +237,29 @@ def assign_technicien():
     technicien_id = data.get('technicien_id')
     ticket_id = data.get('ticket_id')
 
+    if not technicien_id or not ticket_id:
+        return jsonify({'error': 'Technicien et ticket requis'}), 400
+
     con = connect_db()
     cur = con.cursor()
     try:
         cur.execute(
-            "UPDATE ticket SET technicien_id = %s WHERE id = %s",
+            """
+            UPDATE ticket 
+            SET technicien_id = %s, etat = 'OUVERT'
+            WHERE id = %s
+            """,
             (technicien_id, ticket_id)
         )
         con.commit()
-        return jsonify({'success': True}), 200
+        return jsonify({'success': True, 'message': "Technicien assigné et état mis à 'OUVERT'"}), 200
     except Exception as e:
         con.rollback()
         return jsonify({'error': str(e)}), 500
     finally:
         cur.close()
         con.close()
+
 
 @app.route('/listeUtilisateurs', methods=['GET'])
 def listeUtilisateurs():
@@ -652,15 +664,7 @@ def create_ticket():
             logger.warning(f"Sujet non autorisé: {sujet}")
             return jsonify({'error': 'Sujet non autorisé'}), 400
         
-        # Validation que le type est dans les valeurs autorisées
-        types_autorises = [
-            'probleme_livraison', 'incident_transport', 'conteneur', 
-            'stockage', 'facturation_paiement', 'reclamation_client', 
-            'probleme_technique'
-        ]
-        if type_ticket not in types_autorises:
-            logger.warning(f"Type non autorisé: {type_ticket}")
-            return jsonify({'error': 'Type non autorisé'}), 400
+        
         
         logger.info("Début de l'insertion en base de données")
         
@@ -805,58 +809,68 @@ def create_ticket():
 
 @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['POST'])
 def upload_attachment(ticket_id):
-    if 'file' not in request.files:
-        return jsonify({'error': 'Aucun fichier fourni'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nom de fichier vide'}), 400
+    """Upload an attachment for a ticket"""
+    conn = None
+    cur = None
 
     try:
-        # Vérifier que le ticket existe
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM ticket WHERE id = %s", (ticket_id,))
-        if not cur.fetchone():
-            return jsonify({'error': 'Ticket non trouvé'}), 404
+        # Check if file part is in request
+        if 'file' not in request.files:
+            app.logger.warning("No file in request")
+            return jsonify({'error': 'Aucun fichier envoyé'}), 400
 
-        # Créer le dossier d'upload s'il n'existe pas
-        upload_folder = f"uploads/tickets/{ticket_id}"
-        os.makedirs(upload_folder, exist_ok=True)
+        file = request.files['file']
 
-        # Sécuriser le nom du fichier
+        if file.filename == '':
+            app.logger.warning("Empty filename")
+            return jsonify({'error': 'Nom de fichier vide'}), 400
+
+        # Secure filename
         filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_filename = f"{timestamp}_{filename}"
-        file_path = os.path.join(upload_folder, unique_filename)
+        upload_dir = os.path.abspath('uploads')
 
-        # Sauvegarder le fichier
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+
+        file_path = os.path.join(upload_dir, filename)
         file.save(file_path)
 
-        # Enregistrer en BDD
-        cur.execute("""
-            INSERT INTO piece_jointe (nom, chemin, ticket_id)
+        # Insert into database
+        conn = get_db_connection()
+        if not conn:
+            app.logger.error("Database connection failed")
+            return jsonify({'error': 'Erreur connexion base de données'}), 500
+
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO piece_jointe (ticket_id, nom, chemin)
             VALUES (%s, %s, %s)
-            RETURNING id, nom
-        """, (filename, file_path, ticket_id))
-        
-        attachment = cur.fetchone()
+            RETURNING id
+            """,
+            (ticket_id, filename, file_path)
+        )
+        attachment_id = cur.fetchone()[0]
         conn.commit()
 
+        app.logger.info(f"Attachment uploaded: ticket {ticket_id}, file {filename}")
+
         return jsonify({
-            'success': True,
-            'attachment': {
-                'id': attachment[0],
-                'nom': attachment[1]
-            }
+            'message': 'Fichier uploadé avec succès',
+            'attachment_id': attachment_id,
+            'filename': filename
         }), 201
 
     except Exception as e:
-        conn.rollback()
+        app.logger.error(f"Upload failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
 
 @app.route('/api/tickets/<int:ticket_id>/attachments', methods=['GET'])
 def get_ticket_attachments(ticket_id):
@@ -1114,18 +1128,132 @@ def health_check():
             'database': 'disconnected',
             'timestamp': datetime.now().isoformat()
         }), 500
+    
 
-@app.route('/debug/routes')
-def list_routes():
-    """Route de debug pour lister toutes les routes disponibles"""
-    routes = []
-    for rule in app.url_map.iter_rules():
-        routes.append({
-            'endpoint': rule.endpoint,
-            'methods': list(rule.methods),
-            'rule': str(rule)
-        })
-    return jsonify(routes)
+
+
+@app.route('/ticketsTechnicien', methods=['GET'])
+def tickets_technicien():
+    technicien_id = request.args.get('technicien_id')
+    if not technicien_id:
+        return jsonify({"error": "technicien_id requis"}), 400
+
+    try:
+        con = connect_db()
+        cur = con.cursor()
+        cur.execute('''
+            SELECT 
+                t.id,
+                u.nom AS client,
+                t.sujet,
+                t.type,
+                t.etat,
+                t.date_creation
+            FROM ticket t
+            JOIN utilisateur u ON t.client_id = u.id
+            WHERE t.technicien_id = %s
+        ''', (technicien_id,))
+        rows = cur.fetchall()
+        cur.close()
+        con.close()
+
+        tickets = []
+        for row in rows:
+            tickets.append({
+                "id": row[0],
+                "client": row[1],
+                "sujet": row[2],
+                "type": row[3],
+                "etat": row[4],
+                "date_creation": row[5].strftime('%Y-%m-%d %H:%M')
+            })
+
+        return jsonify(tickets)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route('/ticket/<int:ticket_id>', methods=['GET'])
+def get_ticket(ticket_id):
+    try:
+        con = connect_db()
+        cur = con.cursor()
+
+        cur.execute('''
+            SELECT 
+                t.id,
+                u.nom AS client,
+                t.sujet,
+                t.type,
+                t.etat,
+                t.description,
+                t.date_creation,
+                t.date_resolution,
+                tech.nom AS technicien
+            FROM ticket t
+            JOIN utilisateur u ON t.client_id = u.id
+            LEFT JOIN utilisateur tech ON t.technicien_id = tech.id
+            WHERE t.id = %s
+        ''', (ticket_id,))
+
+        row = cur.fetchone()
+        cur.close()
+        con.close()
+
+        if row:
+            ticket = {
+                "id": row[0],
+                "client": row[1],
+                "sujet": row[2],
+                "type": row[3],
+                "etat": row[4],
+                "description": row[5],
+                "date_creation": row[6].strftime('%Y-%m-%d %H:%M'),
+                "date_resolution": row[7].strftime('%Y-%m-%d %H:%M') if row[7] else None,
+                "technicien": row[8] or ""
+            }
+            return jsonify(ticket)
+        else:
+            return jsonify({"error": "Ticket non trouvé"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/tickets/<int:ticket_id>/etat', methods=['PUT'])
+def update_ticket_etat(ticket_id):
+    data = request.get_json()
+    new_etat = data.get("etat")
+    if not new_etat:
+        return {"error": "Etat manquant"}, 400
+
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "Erreur de connexion DB"}, 500
+
+    try:
+        cur = conn.cursor()
+
+        # Si l'état est RESOLU, mettre date_resolution à maintenant, sinon NULL
+        if new_etat == "RESOLU":
+            cur.execute(
+                "UPDATE ticket SET etat=%s, date_resolution=NOW() WHERE id=%s",
+                (new_etat, ticket_id)
+            )
+        else:
+            cur.execute(
+                "UPDATE ticket SET etat=%s, date_resolution=NULL WHERE id=%s",
+                (new_etat, ticket_id)
+            )
+
+        conn.commit()
+        return {"message": "Etat mis à jour avec succès"}
+
+    except Exception as e:
+        print(e)
+        return {"error": "Erreur lors de la mise à jour"}, 500
+    finally:
+        cur.close()
+        conn.close()
 
 if __name__ == '__main__':
     # Créer le dossier uploads s'il n'existe pas

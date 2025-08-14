@@ -26,6 +26,8 @@ import UtilisateurAdmin from './pages/UtilisateurAdmin';
 import ModifierUtilisateur from './pages/ModifierUtilisateur';
 import AjouterUtilisateurAdmin from './pages/AjouterUtilisateurAdmin';
 
+
+import TicketDetailsTech from './pages/ticketDetailsTech';
 const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
@@ -49,6 +51,10 @@ const App = () => {
         <Route path='/UtilisateurAdmin' element={<UtilisateurAdmin />} />
         <Route path='/modifier/:id' element={<ModifierUtilisateur />} />
         <Route path='/ajouterUtilisateurAdmin' element={<AjouterUtilisateurAdmin />} />
+
+
+        <Route path='/ticketDetailsTech/:id' element={<TicketDetailsTech />} />
+
       </Route>
     )
   );

@@ -6,14 +6,19 @@ const DetailsCards = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const [ticket, setTicket] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+
+  // Base URL pour l'API
+  const API_BASE_URL = 'http://localhost:5000';
 
   // Fetch ticket details from backend
   useEffect(() => {
     const fetchTicketDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}`);
+        const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,8 +39,29 @@ const DetailsCards = () => {
 
     if (ticketId) {
       fetchTicketDetails();
+      fetchAttachments(); // Charger aussi les pièces jointes
     }
   }, [ticketId]);
+
+  // Fetch attachments
+  const fetchAttachments = async () => {
+    try {
+      console.log(`🔍 Récupération des pièces jointes pour le ticket ${ticketId}`);
+      const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📎 Pièces jointes reçues:', data);
+        setAttachments(data.attachments || []);
+      } else {
+        console.error('Erreur lors du chargement des pièces jointes:', response.status);
+        setAttachments([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des pièces jointes:', error);
+      setAttachments([]);
+    }
+  };
 
   // Format date function
   const formatDate = (dateString) => {
@@ -51,117 +77,138 @@ const DetailsCards = () => {
     return date.toLocaleDateString('fr-FR', options).replace(' à ', ' à ');
   };
 
-  // Handle file upload
-  // Handler pour l'upload de fichiers
-const handleFileUpload = async (event) => {
-  const files = event.target.files;
-  if (files.length === 0) return;
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
-  try {
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append('file', files[i]);
+  // 🔥 FIXED: Handle file upload with proper error handling
+  const handleFileUpload = async (event) => {
+    const files = event.target.files;
+    if (files.length === 0) return;
+
+    setUploadLoading(true);
+    console.log(`📤 Upload de ${files.length} fichier(s) pour le ticket ${ticketId}`);
+
+    try {
+      // Upload each file individually (as your Flask route expects one file)
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`📁 Upload du fichier: ${file.name} (${formatFileSize(file.size)})`);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 🔥 FIX: Use full URL with proper endpoint
+        const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`, {
+          method: 'POST',
+          body: formData,
+          // Ne pas définir Content-Type, le navigateur le fera automatiquement
+        });
+
+        // 🔥 FIX: Better error handling for empty responses
+        let data = {};
+        const responseText = await response.text();
+        
+        if (responseText) {
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('Erreur parsing JSON:', parseError);
+            console.log('Response text:', responseText);
+            throw new Error('Réponse serveur invalide');
+          }
+        }
+        
+        if (!response.ok) {
+          throw new Error(data.error || `Erreur HTTP ${response.status}`);
+        }
+
+        console.log(`✅ Fichier ${file.name} uploadé avec succès`);
+      }
+
+      // Refresh attachments list
+      await fetchAttachments();
+      
+      // Reset file input
+      event.target.value = '';
+      
+      alert(`fichier(s) uploadé(s) avec succès!`);
+      
+    } catch (error) {
+      console.error('❌ Erreur upload:', error);
+      alert(`Erreur lors de l'upload: ${error.message}`);
+    } finally {
+      setUploadLoading(false);
     }
+  };
 
-    const response = await fetch(`/api/tickets/${ticketId}/attachments`, {
-      method: 'POST',
-      body: formData,
-      // Note: Ne pas mettre 'Content-Type' header, le navigateur le fera automatiquement
-    });
+  // 🔥 IMPROVED: Download individual attachment
+  const handleDownloadAttachment = async (attachmentId, fileName) => {
+    try {
+      console.log(`📥 Téléchargement de ${fileName} (ID: ${attachmentId})`);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/api/tickets/${ticketId}/attachments/${attachmentId}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
 
-    const data = await response.json();
-    
-    if (response.ok) {
-      // Rafraîchir les données du ticket
-      const ticketResponse = await fetch(`/api/tickets/${ticketId}`);
-      const ticketData = await ticketResponse.json();
-      setTicket(ticketData.ticket);
-      alert('Fichier(s) uploadé(s) avec succès');
-    } else {
-      throw new Error(data.error || 'Erreur lors de l\'upload');
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      console.log(`✅ ${fileName} téléchargé avec succès`);
+      
+    } catch (error) {
+      console.error(`❌ Erreur téléchargement ${fileName}:`, error);
+      alert(`Erreur lors du téléchargement: ${error.message}`);
     }
-  } catch (error) {
-    console.error('Upload error:', error);
-    alert(error.message);
-  }
-};
+  };
 
-// Handler pour le téléchargement avec meilleure gestion d'erreurs
-const handleDownloadAttachments = async () => {
-  try {
-    // 1. Vérification de la connexion
-    const healthCheck = await fetch('http://localhost:5000/api/health');
-    if (!healthCheck.ok) throw new Error("Serveur indisponible");
-
-    // 2. Récupération des pièces jointes
-    const res = await fetch(`http://localhost:5000/api/tickets/${ticketId}/attachments`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Échec de la requête");
-    }
-
-    const { attachments } = await res.json();
-    if (!attachments?.length) {
+  // 🔥 IMPROVED: Download all attachments
+  const handleDownloadAllAttachments = async () => {
+    if (attachments.length === 0) {
       alert("Aucune pièce jointe disponible");
       return;
     }
 
-    // 3. Téléchargement séquentiel
-    for (const att of attachments) {
-      try {
-        const fileRes = await fetch(
-          `http://localhost:5000/api/tickets/${ticketId}/attachments/${att.id}`
-        );
-        
-        if (!fileRes.ok) {
-          console.error(`Échec pour ${att.id}: ${fileRes.statusText}`);
-          continue;
-        }
-
-        // Gestion du nom de fichier
-        const filename = att.nom || `piece_jointe_${att.id}`;
-        const blob = await fileRes.blob();
-        
-        // Création du lien de téléchargement
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-        
-      } catch (fileError) {
-        console.error(`Erreur sur ${att.id}:`, fileError);
+    try {
+      console.log(`📦 Téléchargement de ${attachments.length} pièce(s) jointe(s)`);
+      
+      // Download each attachment sequentially
+      for (const attachment of attachments) {
+        await handleDownloadAttachment(attachment.id, attachment.nom);
+        // Small delay between downloads to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+      
+      console.log('✅ Tous les téléchargements terminés');
+      
+    } catch (error) {
+      console.error("❌ Erreur téléchargement global:", error);
+      alert(`Erreur: ${error.message}`);
     }
-
-  } catch (err) {
-    console.error("Erreur globale:", err);
-    alert(`Erreur : ${err.message}`);
-  }
-};
-
-// Fonction utilitaire pour tester la connexion au serveur
-const testServerConnection = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/tickets');
-    if (response.ok) {
-      console.log('✓ Serveur Flask accessible');
-      return true;
-    } else {
-      console.error('✗ Serveur Flask retourne une erreur:', response.status);
-      return false;
-    }
-  } catch (error) {
-    console.error('✗ Impossible de contacter le serveur Flask:', error);
-    return false;
-  }
-};
+  };
 
   // Handlers
   const handleNewTicket = () => {
@@ -173,8 +220,8 @@ const testServerConnection = async () => {
   };
 
   const handleBackToDashboard = () => {
-  navigate(-1); // Retour à la page précédente
-};
+    navigate(-1); // Retour à la page précédente
+  };
 
   if (loading) {
     return (
@@ -196,7 +243,9 @@ const testServerConnection = async () => {
             <p className="text-red-600 mb-4">{error || 'Ticket non trouvé'}</p>
             <button 
               onClick={handleBackToDashboard}
-className="text-lg font-bold" style={{ color: '#8f1630' }}            >
+              className="text-lg font-bold" 
+              style={{ color: '#8f1630' }}
+            >
               Retour au Dashboard
             </button>
           </div>
@@ -206,7 +255,7 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
   }
 
   return (
-    <div className="min-h-screen  dashboard-container bg-custom">
+    <div className="min-h-screen dashboard-container bg-custom">
       {/* Background pattern */}
       <div className="dashboard-background">
         <div className="map-pattern"></div>
@@ -225,7 +274,9 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
           <div className="mb-6">
             <button 
               onClick={handleBackToDashboard}
-className="text-lg font-bold" style={{ color: '#8f1630' }}            >
+              className="text-lg font-bold" 
+              style={{ color: '#8f1630' }}
+            >
               ← Retour 
             </button>
           </div>
@@ -283,51 +334,91 @@ className="text-lg font-bold" style={{ color: '#8f1630' }}            >
                 <span className="text-gray-700 ml-2">{ticket.id}</span>
               </div>
 
-              {/* Pièces jointes section */}
+              {/* 🔥 IMPROVED: Pièces jointes section */}
               <div className="pt-6 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-4">
+                <h3 className="font-bold text-gray-800 mb-4">Pièces jointes</h3>
+                
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
                   {/* Upload button */}
-                  <div>
+                  <div className="relative">
                     <input
                       type="file"
                       id="fileUpload"
                       multiple
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt"
                       onChange={handleFileUpload}
+                      disabled={uploadLoading}
                       className="hidden"
                     />
                     <label
                       htmlFor="fileUpload"
-className="w-full bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-900 transition-colors font-medium text-lg shadow-lg text-center block cursor-pointer"                    >
-                      Ajouter pièces jointes
+                      className={`w-full px-8 py-3 rounded-lg transition-colors font-medium text-lg shadow-lg text-center block cursor-pointer ${
+                        uploadLoading 
+                          ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+                          : 'bg-[#8f1630] text-white hover:bg-red-900'
+                      }`}
+                    >
+                      {uploadLoading ? 'Upload en cours...' : 'Ajouter pièces jointes'}
                     </label>
                   </div>
 
-                  {/* Download button */}
+                  {/* Download all button */}
                   <button
-                    onClick={handleDownloadAttachments}
-                    className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-900 transition-colors font-medium text-lg shadow-lg"
+                    onClick={handleDownloadAllAttachments}
+                    disabled={attachments.length === 0}
+                    className={`px-8 py-3 rounded-lg transition-colors font-medium text-lg shadow-lg ${
+                      attachments.length === 0
+                        ? 'bg-[#8f1630] text-white cursor-not-allowed'
+                        : 'bg-[#8f1630] text-white hover:bg-green-900'
+                    }`}
                   >
-                    Télécharger pièces jointes
-                    {ticket.pieces_jointes && ticket.pieces_jointes.length > 0 && (
-                      <span className="ml-2 bg-green-800 text-xs px-2 py-1 rounded-full">
-                        {ticket.pieces_jointes.length}
-                      </span>
-                    )}
+                    Télécharger tout ({attachments.length})
                   </button>
                 </div>
 
-                {/* Liste des pièces jointes existantes */}
-                {ticket.pieces_jointes && ticket.pieces_jointes.length > 0 && (
+                {/* 🔥 NEW: Liste des pièces jointes existantes */}
+                {attachments.length > 0 && (
                   <div className="mt-4">
-                    <p className="font-medium text-gray-700 mb-2">Pièces jointes actuelles :</p>
-                    <ul className="space-y-1">
-                      {ticket.pieces_jointes.map((piece) => (
-                        <li key={piece.id} className="text-sm text-gray-600">
-                          • {piece.nom}
-                        </li>
+                    <p className="font-medium text-gray-700 mb-3">
+                      Pièces jointes disponibles ({attachments.length}) :
+                    </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {attachments.map((attachment) => (
+                        <div 
+                          key={attachment.id} 
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{attachment.nom}</p>
+                            <p className="text-sm text-gray-600">
+                              {formatFileSize(attachment.taille)}
+                              {!attachment.exists && (
+                                <span className="text-red-500 ml-2">(Fichier manquant)</span>
+                              )}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleDownloadAttachment(attachment.id, attachment.nom)}
+                            disabled={!attachment.exists}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                              attachment.exists
+                                ? 'bg-[#8f1630] text-white hover:bg-blue-700'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                          >
+                            Télécharger
+                          </button>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Message when no attachments */}
+                {attachments.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Aucune pièce jointe pour ce ticket</p>
+                    <p className="text-sm mt-1">Utilisez le bouton ci-dessus pour en ajouter</p>
                   </div>
                 )}
               </div>

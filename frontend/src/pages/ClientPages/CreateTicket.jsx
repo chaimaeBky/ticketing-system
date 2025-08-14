@@ -211,32 +211,24 @@ if (response.ok && data.success) {
                 </div>
               </div>
 
+             
               {/* Type */}
-              <div className="relative">
-                <label htmlFor="type" className="block text-base font-semibold text-gray-800 mb-2">
-                  Type
-                </label>
-                <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors bg-white appearance-none cursor-pointer"
-                  required
-                >
-                  {typeOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Flèche personnalisée pour le select */}
-                <div className="absolute right-3 top-9 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+            <div className="relative">
+              <label htmlFor="type" className="block text-base font-semibold text-gray-800 mb-2">
+                Type
+              </label>
+              <input
+                type="text"
+                id="type"
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                placeholder="Entrez le type du ticket"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors bg-white"
+                required
+              />
+            </div>
+
 
               {/* Description */}
               <div>
