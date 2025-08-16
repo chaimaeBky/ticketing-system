@@ -39,7 +39,7 @@ const Register = () => {
       const res = await axios.post("http://localhost:5000/register", { newUser });
       setMessage(res.data.message);
 
-    if (res.data.message === "Utilisateur enregistré avec succès") {
+    if (res.data.message === "Utilisateur enregistré avec succès et email envoyé") {
         navigate('/');
     }
 

@@ -6,14 +6,119 @@ from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 import logging
+from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from collections import defaultdict
+import logging
+import traceback
+import textwrap
+
 
 app = Flask(__name__)
 CORS(app) 
 
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = 'chaimaebky14@gmail.com'
+app.config['MAIL_PASSWORD'] = 'umadeaeizuisjzkf' 
+app.config['MAIL_DEFAULT_SENDER'] = 'chaimaebky14@gmail.com'
+app.config['MAIL_DEBUG'] = True
+app.config['MAIL_SUPPRESS_SEND'] = False
+
+mail = Mail(app)
+
+#partie des email !
+
+def send_assignment_email(technicien_info, ticket_info, ticket_id):
+    """
+    Fonction pour envoyer l'email d'assignation avec debugging complet
+    """
+    print("=" * 50)
+    print("🔄 DÉBUT DE L'ENVOI D'EMAIL")
+    print(f"📊 Ticket ID: {ticket_id}")
+    print(f"👤 Technicien: {technicien_info}")
+    print(f"🎫 Ticket Info: {ticket_info}")
+    
+    try:
+        technicien_nom = technicien_info[0] if technicien_info[0] else "Technicien"
+        technicien_email = technicien_info[1]
+        
+        print(f"📧 Email destinataire: {technicien_email}")
+        
+        # Vérifications de base
+        if not technicien_email:
+            print("❌ ERREUR: Email destinataire vide")
+            return False
+            
+        if '@' not in technicien_email:
+            print(f"❌ ERREUR: Email invalide: {technicien_email}")
+            return False
+        
+        print("✅ Validation email OK")
+        
+        # Test de la configuration mail
+        print(f"🔧 Configuration Mail:")
+        print(f"   Server: {app.config.get('MAIL_SERVER')}")
+        print(f"   Port: {app.config.get('MAIL_PORT')}")
+        print(f"   Username: {app.config.get('MAIL_USERNAME')}")
+        print(f"   TLS: {app.config.get('MAIL_USE_TLS')}")
+        
+        msg = Message(
+        subject=f"Nouvelle assignation : Ticket #{ticket_id} - {ticket_info[0]}",
+        recipients=[technicien_email],
+        sender=app.config['MAIL_USERNAME']
+)
+
+
+
+        msg.body = textwrap.dedent(f"""
+    Bonjour {technicien_nom},
+
+    Vous avez été assigné au ticket #{ticket_id}.
+
+        Détails du ticket :
+        Sujet           :   {ticket_info[0]}
+        Description     :   {ticket_info[1]}
+        Date            :   {ticket_info[2]}
+        Type            :   {ticket_info[3]}
+        Client          :   {ticket_info[4]}
+
+    Merci de traiter ce ticket dès que possible.
+
+    Cordialement,
+    L'équipe technique de TirsoSupport 
+""")
+
+        print("✅ Message créé")
+        print(f"📬 Destinataires: {msg.recipients}")
+        print(f"📬 Expéditeur: {msg.sender}")
+        print(f"📬 Sujet: {msg.subject}")
+        
+        # Tentative d'envoi
+        print("🚀 Tentative d'envoi...")
+        
+        with app.app_context():
+            mail.send(msg)
+            
+        print("✅ EMAIL ENVOYÉ AVEC SUCCÈS!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERREUR lors de l'envoi:")
+        print(f"   Type: {type(e).__name__}")
+        print(f"   Message: {str(e)}")
+        print(f"   Stack trace:")
+        traceback.print_exc()
+        return False
+    finally:
+        print("=" * 50)
+
+    
+
 # Configuration des logs
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Configuration centralisée de la base de données
@@ -24,6 +129,11 @@ DB_CONFIG = {
     'user': 'postgres',
     'password': 'postgres'  # Changé pour correspondre au premier code
 }
+
+
+
+
+
 
 def get_db_connection():
     """Fonction unique pour toute l'application"""
@@ -91,6 +201,7 @@ def register():
         con = connect_db()
         cur = con.cursor()
 
+        # Vérifier si l'email existe déjà
         cur.execute("SELECT id FROM utilisateur WHERE email = %s", (newUser.get('email'),))
         existing_user = cur.fetchone()
         if existing_user:
@@ -98,6 +209,7 @@ def register():
             con.close()
             return jsonify({"error": "Cet email est déjà utilisé."}), 409
 
+        # Insérer l'utilisateur
         cur.execute("""
             INSERT INTO utilisateur (id, nom, email, mot_de_passe, role)
             VALUES (%s, %s, %s, %s, %s)
@@ -112,6 +224,7 @@ def register():
         con.commit()
         cur.close()
 
+        # Récupérer l'utilisateur créé
         cur2 = con.cursor()
         cur2.execute("SELECT * FROM utilisateur WHERE id = %s", (newUser.get('id'),))
         user = cur2.fetchone()
@@ -119,13 +232,39 @@ def register():
         con.close()
 
         if user:
-            return jsonify({"message": "Utilisateur enregistré avec succès"})
+            # Envoyer l'email de bienvenue
+            client_nom = newUser.get('nom')
+            client_email = newUser.get('email')
+            msg = Message(
+                subject="Bienvenue sur TirsoSupport !",
+                recipients=[client_email],
+                sender=app.config['MAIL_USERNAME']
+            )
+            msg.body = f"""
+Bonjour {client_nom},
+
+Votre compte sur TirsoSupport a été créé avec succès !
+
+Voici vos informations de connexion :
+Email : {client_email}
+Mot de passe : (celui que vous avez choisi lors de l'inscription)
+
+Merci de votre confiance et bienvenue parmi nous !
+
+Cordialement,
+L'équipe TirsoSupport
+"""
+            with app.app_context():
+                mail.send(msg)
+
+            return jsonify({"message": "Utilisateur enregistré avec succès et email envoyé"}), 201
         else:
             return jsonify({"message": "Échec de l'enregistrement"}), 401
 
     except Exception as e:
         print("Erreur :", e)  
         return jsonify({"error": str(e)}), 500
+
 
 # ========== ROUTES ADMIN ==========
 
@@ -233,9 +372,15 @@ def listeTechniciens():
 
 @app.route('/assign-technicien', methods=['POST'])
 def assign_technicien():
+    print("\n🔄 DÉBUT ASSIGNATION TECHNICIEN")
+    
     data = request.json
     technicien_id = data.get('technicien_id')
     ticket_id = data.get('ticket_id')
+    
+    print(f"📊 Données reçues:")
+    print(f"   Technicien ID: {technicien_id}")
+    print(f"   Ticket ID: {ticket_id}")
 
     if not technicien_id or not ticket_id:
         return jsonify({'error': 'Technicien et ticket requis'}), 400
@@ -243,6 +388,45 @@ def assign_technicien():
     con = connect_db()
     cur = con.cursor()
     try:
+        # Récupérer les informations du technicien
+        print("🔍 Recherche du technicien...")
+        cur.execute(
+            """
+            SELECT nom, email 
+            FROM utilisateur 
+            WHERE id = %s AND role = 'technicien'
+            """,
+            (technicien_id,)
+        )
+        technicien_info = cur.fetchone()
+        
+        if not technicien_info:
+            print("❌ Technicien introuvable")
+            return jsonify({'error': 'Technicien introuvable'}), 404
+        
+        print(f"✅ Technicien trouvé: {technicien_info}")
+        
+        # Récupérer les informations du ticket
+        print("🔍 Recherche du ticket...")
+        cur.execute(
+            """
+            SELECT t.sujet, t.description, t.date_creation, t.type, u.nom as client_nom
+            FROM ticket t
+            JOIN utilisateur u ON t.client_id = u.id
+            WHERE t.id = %s
+            """,
+            (ticket_id,)
+        )
+        ticket_info = cur.fetchone()
+        
+        if not ticket_info:
+            print("❌ Ticket introuvable")
+            return jsonify({'error': 'Ticket introuvable'}), 404
+        
+        print(f"✅ Ticket trouvé: {ticket_info}")
+        
+        # Mettre à jour le ticket
+        print("💾 Mise à jour du ticket...")
         cur.execute(
             """
             UPDATE ticket 
@@ -252,13 +436,37 @@ def assign_technicien():
             (technicien_id, ticket_id)
         )
         con.commit()
-        return jsonify({'success': True, 'message': "Technicien assigné et état mis à 'OUVERT'"}), 200
+        print("✅ Ticket mis à jour")
+        
+        # Envoyer l'email
+        print("📧 Lancement de l'envoi d'email...")
+        email_sent = send_assignment_email(technicien_info, ticket_info, ticket_id)
+        
+        response_data = {
+            'success': True,
+            'message': f"Technicien assigné et état mis à 'OUVERT'"
+        }
+        
+        if email_sent:
+            response_data['message'] += f" - Email envoyé à {technicien_info[1]}"
+            print("🎉 SUCCÈS COMPLET!")
+        else:
+            response_data['warning'] = "Erreur lors de l'envoi de l'email"
+            print("⚠️ SUCCÈS PARTIEL (sans email)")
+        
+        print(f"📤 Réponse: {response_data}")
+        return jsonify(response_data), 200
+        
     except Exception as e:
         con.rollback()
+        print(f"❌ ERREUR GÉNÉRALE: {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     finally:
         cur.close()
         con.close()
+        print("🔚 FIN ASSIGNATION TECHNICIEN\n")
+
 
 
 @app.route('/listeUtilisateurs', methods=['GET'])
@@ -749,8 +957,8 @@ def create_ticket():
         
         ticket_complet = cursor.fetchone()
         
+        # Après avoir récupéré ticket_complet et construit ticket_data
         if ticket_complet:
-            # Formatage des données comme dans votre fonction format_ticket_data
             ticket_data = {
                 'id': ticket_complet[0],
                 'sujet': ticket_complet[1],
@@ -765,12 +973,42 @@ def create_ticket():
                 'client_email': ticket_complet[10],
                 'technicien_nom': None
             }
-            
+
+            # ✅ ENVOI MAIL AU CLIENT
+            client_email = ticket_data['client_email']
+            client_nom = ticket_data['client_nom']
+            if client_email:
+                msg = Message(
+                    subject=f"Nouveau ticket créé #{ticket_data['id']}",
+                    recipients=[client_email],
+                    sender=app.config['MAIL_USERNAME']
+                )
+                msg.body = f"""
+        Bonjour {client_nom},
+
+        Un nouveau ticket a été créé à votre nom.
+
+        Détails du ticket :
+        Sujet       : {ticket_data['sujet']}
+        Description : {ticket_data['description']}
+        Type        : {ticket_data['type']}
+        Etat        : {ticket_data['etat']}
+        Date        : {ticket_data['date_creation']}
+
+        Merci pour votre confiance.
+
+        Cordialement,
+        L'équipe technique de TirsoSupport 
+        """
+                with app.app_context():
+                    mail.send(msg)
+
             return jsonify({
                 'success': True,
-                'message': 'Ticket créé avec succès',
+                'message': 'Ticket créé avec succès et email envoyé au client',
                 'ticket': ticket_data
             }), 201
+
         else:
             # Fallback si la requête complète échoue
             return jsonify({
@@ -1219,6 +1457,7 @@ def get_ticket(ticket_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 @app.route('/tickets/<int:ticket_id>/etat', methods=['PUT'])
 def update_ticket_etat(ticket_id):
     data = request.get_json()
@@ -1233,7 +1472,22 @@ def update_ticket_etat(ticket_id):
     try:
         cur = conn.cursor()
 
-        # Si l'état est RESOLU, mettre date_resolution à maintenant, sinon NULL
+        # Récupérer le ticket et info client + technicien
+        cur.execute("""
+            SELECT t.sujet, t.description, t.date_creation, t.type,
+                   c.nom, c.email, 
+                   tech.nom, tech.email
+            FROM ticket t
+            JOIN utilisateur c ON t.client_id = c.id
+            LEFT JOIN utilisateur tech ON t.technicien_id = tech.id
+            WHERE t.id = %s
+        """, (ticket_id,))
+        ticket_info = cur.fetchone()
+
+        if not ticket_info:
+            return {"error": "Ticket introuvable"}, 404
+
+        # Mise à jour de l'état et date_resolution
         if new_etat == "RESOLU":
             cur.execute(
                 "UPDATE ticket SET etat=%s, date_resolution=NOW() WHERE id=%s",
@@ -1246,7 +1500,74 @@ def update_ticket_etat(ticket_id):
             )
 
         conn.commit()
-        return {"message": "Etat mis à jour avec succès"}
+
+        client_nom, client_email = ticket_info[4], ticket_info[5]
+        tech_nom, tech_email = ticket_info[6], ticket_info[7]
+
+        # Sujet des mails selon l'état
+        subject_map = {
+            "RESOLU": f"Ticket #{ticket_id} résolu",
+            "EN COURS": f"Ticket #{ticket_id} en cours de traitement"
+        }
+
+        # Email au client si applicable
+        if client_email and new_etat in ["RESOLU", "EN COURS"]:
+            msg_client = Message(
+                subject=subject_map[new_etat],
+                recipients=[client_email],
+                sender=app.config['MAIL_USERNAME']
+            )
+            msg_client.body = f"""
+Bonjour {client_nom},
+
+Votre ticket #{ticket_id} a été mis à jour.
+
+Etat actuel : {new_etat}
+
+Détails du ticket :
+Sujet       : {ticket_info[0]}
+Description : {ticket_info[1]}
+Date        : {ticket_info[2]}
+Type        : {ticket_info[3]}
+
+Merci pour votre patience.
+
+Cordialement,
+L'équipe technique de TirsoSupport
+"""
+            with app.app_context():
+                mail.send(msg_client)
+
+        # Email au technicien si applicable
+        if tech_email:
+            msg_tech = Message(
+                subject=f"Ticket #{ticket_id} mis à jour par vous ",
+                recipients=[tech_email],
+                sender=app.config['MAIL_USERNAME']
+            )
+            msg_tech.body = f"""
+Bonjour {tech_nom},
+
+Le ticket #{ticket_id} a été mis à jour.
+
+Nouvel état : {new_etat}
+
+Détails du ticket :
+Sujet       : {ticket_info[0]}
+Description : {ticket_info[1]}
+Date        : {ticket_info[2]}
+Type        : {ticket_info[3]}
+Client      : {client_nom}
+
+Merci de prendre les mesures nécessaires.
+
+Cordialement,
+L'équipe technique de TirsoSupport
+"""
+            with app.app_context():
+                mail.send(msg_tech)
+
+        return {"message": "Etat mis à jour avec succès, notifications envoyées"}
 
     except Exception as e:
         print(e)
@@ -1254,6 +1575,46 @@ def update_ticket_etat(ticket_id):
     finally:
         cur.close()
         conn.close()
+
+
+
+
+
+
+# Route de test pour vérifier la config email
+@app.route('/test-email-config', methods=['GET'])
+def test_email_config():
+    """Route pour tester uniquement la configuration email"""
+    print("\n🧪 TEST DE CONFIGURATION EMAIL")
+    
+    try:
+        # Test de base
+        msg = Message(
+            subject="Test de configuration",
+            recipients=["chaimaebky14@gmail.com"],  # Votre email
+            body="Test de configuration email - si vous recevez ceci, ça marche !",
+            sender=app.config['MAIL_USERNAME']
+        )
+        
+        print(f"📧 Test vers: {msg.recipients[0]}")
+        
+        with app.app_context():
+            mail.send(msg)
+            
+        print("✅ TEST EMAIL RÉUSSI!")
+        return jsonify({
+            'success': True, 
+            'message': 'Email de test envoyé avec succès'
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ ÉCHEC TEST EMAIL: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'error': f'Erreur test email: {str(e)}'
+        }), 500
+    
+
 
 if __name__ == '__main__':
     # Créer le dossier uploads s'il n'existe pas

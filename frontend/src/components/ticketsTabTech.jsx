@@ -18,7 +18,7 @@ const TicketsTabTech = () => {
 
   useEffect(() => {
     if (!technicienId) {
-      navigate("/"); // rediriger si pas connecté
+      navigate("/"); 
       return;
     }
 
