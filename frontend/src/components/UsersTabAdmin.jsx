@@ -16,7 +16,7 @@ const UsersTabAdmin = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/listeUtilisateurs")
+      .get("http://localhost:5000/listeUtilisateurs", { withCredentials: true })
       .then((response) => {
         setUsers(response.data.utilisateurs);
       })
@@ -29,7 +29,7 @@ const UsersTabAdmin = () => {
   if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) return;
 
   axios
-    .delete(`http://localhost:5000/supprimerUtilisateur/${id}`)
+    .delete(`http://localhost:5000/supprimerUtilisateur/${id}`, { withCredentials: true })
     .then(() => {
       setUsers(users.filter((user) => user.id !== id));
     })

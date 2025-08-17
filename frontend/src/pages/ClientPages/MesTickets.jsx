@@ -67,7 +67,7 @@ const MesTickets = () => {
 
       console.log("URL appelée :", `http://localhost:5000/api/tickets/client/${clientId}`);
       
-      const response = await fetch(`http://localhost:5000/api/tickets/client/${clientId}`);
+      const response = await fetch(`http://localhost:5000/api/tickets/client/${clientId}`,{credentials: 'include',});
       console.log("Status de la réponse :", response.status);
       console.log("Response OK :", response.ok);
       

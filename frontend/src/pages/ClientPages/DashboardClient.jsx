@@ -26,7 +26,7 @@ const fetchTickets = async () => {
       return;
     }
     
-    const response = await fetch(`http://localhost:5000/api/tickets/client/${clientId}`);
+    const response = await fetch(`http://localhost:5000/api/tickets/client/${clientId}` ,{credentials: 'include',});
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

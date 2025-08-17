@@ -11,7 +11,7 @@ const Login = () => {
     const loginSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:5000/', { email, password });
+            const res = await axios.post('http://localhost:5000/' , { email, password }, { withCredentials: true });
             const user = res.data.user;
 
             if (!user) {
@@ -22,11 +22,13 @@ const Login = () => {
             localStorage.setItem('user', JSON.stringify(user));
 
             if (user.role === 'technicien') {
-                localStorage.setItem('technicien_id', user.id);
+                localStorage.setItem("user_id", user.id);
                 navigate('/technicien');
             } else if (user.role === 'admin') {
+              localStorage.setItem("user_id", user.id);
                 navigate('/admin');
             } else if (user.role === 'client') {
+              localStorage.setItem("user_id", user.id);
                 navigate('/client/dashboard');
             }
 

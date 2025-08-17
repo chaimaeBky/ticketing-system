@@ -15,7 +15,7 @@ const TicketDetailsTech = () => {
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/ticket/${id}`);
+        const res = await fetch(`${API_BASE_URL}/ticket/${id}` , {credentials: 'include',});
         const data = await res.json();
         if (data.error) setError(data.error);
         else setTicket(data);
@@ -29,7 +29,7 @@ const TicketDetailsTech = () => {
 
     const fetchAttachments = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/tickets/${id}/attachments`);
+        const res = await fetch(`${API_BASE_URL}/api/tickets/${id}/attachments` ,{credentials: 'include',});
         const data = await res.json();
         setAttachments(data.attachments || []);
       } catch (err) {
@@ -67,7 +67,7 @@ const TicketDetailsTech = () => {
     try {
       console.log(`📥 Téléchargement de ${fileName} (ID: ${attachmentId})`);
       
-      const response = await fetch(`${API_BASE_URL}/api/tickets/${id}/attachments/${attachmentId}`);
+      const response = await fetch(`${API_BASE_URL}/api/tickets/${id}/attachments/${attachmentId}`,{credentials: 'include',});
       
       if (!response.ok) {
         throw new Error(`Erreur ${response.status}: ${response.statusText}`);
@@ -132,6 +132,7 @@ const TicketDetailsTech = () => {
 
       const res = await fetch(`${API_BASE_URL}/tickets/${id}/etat`, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData),
       });

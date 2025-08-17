@@ -8,7 +8,7 @@ const TicketsParMois = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/ticketsParMois")
+    axios.get("http://localhost:5000/ticketsParMois", { withCredentials: true })
       .then((res) => {
         setData(res.data.ticketsParMois);
       })

@@ -113,6 +113,7 @@ formDataToSend.append('client_id', clientId);
 
       const response = await fetch('http://localhost:5000/api/tickets', {
         method: 'POST',
+        credentials: 'include',
         body: formDataToSend,
         // Ne pas définir Content-Type, le navigateur le fera automatiquement pour FormData
       });

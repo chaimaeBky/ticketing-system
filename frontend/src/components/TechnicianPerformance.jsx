@@ -5,7 +5,7 @@ function TechnicianPerformance() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/technicians/performance")
+    fetch("http://localhost:5000/technicians/performance" ,{credentials: 'include',})
       .then((res) => res.json())
       .then((data) => setData(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Erreur de chargement :", err));

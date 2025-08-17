@@ -15,12 +15,12 @@ const TicketsTabAdmin = () => {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/ticketsAdmin")
+    fetch("http://localhost:5000/ticketsAdmin",{credentials: 'include',})
       .then((res) => res.json())
       .then((data) => setTickets(data || []))
       .catch((err) => console.error("Erreur tickets:", err));
 
-    fetch("http://localhost:5000/listeTechniciens")
+    fetch("http://localhost:5000/listeTechniciens" , {credentials: 'include',})
       .then((res) => res.json())
       .then((res) => setTechniciens(res.techniciens || []))
       .catch((err) => console.error("Erreur techniciens:", err));
@@ -29,6 +29,7 @@ const TicketsTabAdmin = () => {
   const handleAssign = (ticketId, technicienId) => {
     fetch(`http://localhost:5000/assign-technicien`, {
       method: "POST",
+      credentials: 'include', 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ticket_id: ticketId, technicien_id: technicienId }),
     })

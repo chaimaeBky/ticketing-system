@@ -6,7 +6,7 @@ const TotalTickets = () => {
   const [total, setTotal] = useState(null);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/admin")
+    axios.get("http://localhost:5000/admin", { withCredentials: true })
       .then((res) => {
         setTotal(res.data.totalTickets);
       })

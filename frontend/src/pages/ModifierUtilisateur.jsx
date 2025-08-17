@@ -14,42 +14,141 @@ function ModifierUtilisateur() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Configure axios defaults
+  axios.defaults.withCredentials = true;
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/utilisateur/${id}`)
-      .then(res => {
-        setFormData({
-          nom: res.data.nom || '',
-          email: res.data.email || '',
-          role: res.data.role || '',
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        const response = await axios.get(`http://localhost:5000/utilisateur/${id}`, {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         });
+        
+        setFormData({
+          nom: response.data.nom || '',
+          email: response.data.email || '',
+          role: response.data.role || '',
+        });
+        
+      } catch (err) {
+        console.error('Erreur lors du chargement:', err);
+        if (err.response) {
+          setError(err.response.data?.error || 'Erreur lors du chargement des données');
+        } else if (err.request) {
+          setError('Impossible de contacter le serveur');
+        } else {
+          setError('Erreur inconnue lors du chargement');
+        }
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+      }
+    };
+
+    if (id) {
+      fetchUser();
+    }
   }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(''); // Clear error when user types
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (!formData.nom.trim()) {
+      setError('Le nom est requis');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError('L\'email est requis');
+      return false;
+    }
+    if (!formData.role.trim()) {
+      setError('Le rôle est requis');
+      return false;
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Format d\'email invalide');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    axios.put(`http://localhost:5000/modifierUtilisateur/${id}`, formData)
-      .then(() => {
-        alert("Utilisateur modifié avec succès !");
-        navigate("/UtilisateurAdmin");
-      })
-      .catch(err => console.error(err));
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setError('');
+      
+      const response = await axios.put(
+        `http://localhost:5000/modifierUtilisateur/${id}`,
+        {
+          nom: formData.nom.trim(),
+          email: formData.email.trim(),
+          role: formData.role.trim()
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      alert("Utilisateur modifié avec succès !");
+      navigate("/UtilisateurAdmin");
+      
+    } catch (err) {
+      console.error('Erreur lors de la modification:', err);
+      
+      if (err.response) {
+        // Server responded with error status
+        const errorMessage = err.response.data?.error || 
+                           `Erreur ${err.response.status}: ${err.response.statusText}`;
+        setError(errorMessage);
+        alert(errorMessage);
+      } else if (err.request) {
+        // Request was made but no response received
+        const errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+        setError(errorMessage);
+        alert(errorMessage);
+      } else {
+        // Something else happened
+        const errorMessage = 'Erreur inconnue, veuillez réessayer !';
+        setError(errorMessage);
+        alert(errorMessage);
+      }
+    }
   };
 
   if (loading) {
-    return <div className="text-center mt-10 text-gray-500">Chargement des données...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg text-gray-500">Chargement des données...</div>
+        </div>
+      </div>
+    );
   }
-
   return (
      <div className="min-h-screen w-full pt-24">
     <AdminMenu />

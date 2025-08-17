@@ -34,10 +34,10 @@ const AjouterUtilisateurAdmin = () => {
     console.log("Envoi des données :", newUser);
 
     try {
-      const res = await axios.post("http://localhost:5000/register", { newUser });
+      const res = await axios.post("http://localhost:5000/register", { newUser }, { withCredentials: true } ,);
       setMessage(res.data.message);
 
-      if (res.data.message === "Utilisateur enregistré avec succès") {
+      if (res.data.message === "Utilisateur enregistré avec succès et email envoyé") {
         alert("Utilisateur enregistré avec succès")
         navigate('/UtilisateurAdmin');
       }

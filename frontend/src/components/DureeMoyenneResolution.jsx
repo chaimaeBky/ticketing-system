@@ -6,7 +6,7 @@ const DureeMoyenne = () => {
   const [duree, setDuree] = useState(null);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/admin")
+    axios.get("http://localhost:5000/admin", { withCredentials: true })
       .then((res) => {
         setDuree(res.data.dureeMoyenne);
       })

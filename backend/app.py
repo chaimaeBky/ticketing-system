@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory , session
 import psycopg2
 import bcrypt
 from flask_cors import CORS
@@ -12,11 +12,60 @@ from collections import defaultdict
 import logging
 import traceback
 import textwrap
+import os
+
+
 
 
 app = Flask(__name__)
-CORS(app) 
+app.secret_key = 'supersecret'
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
+import psycopg2
+from psycopg2 import errors
 
+app = Flask(__name__)
+app.secret_key = 'supersecret'
+
+# Improved CORS configuration
+CORS(app,
+     origins=["http://localhost:5173"],  # Use list format
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "Accept"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     expose_headers=["Content-Type", "Authorization"]
+)
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        # Handle preflight requests
+        response = jsonify({'status': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 200
+
+@app.before_request
+def require_login():
+    public_routes = ["/register", "/"]
+    
+    # Skip authentication for OPTIONS requests
+    if request.method == "OPTIONS":
+        return
+        
+    if request.path in public_routes or request.path.startswith("/static/"):
+        return
+        
+    if 'user_id' not in session:
+        response = jsonify({'error': 'Utilisateur non connecté'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 401
+
+
+    
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -152,43 +201,42 @@ def connect_db():
         password="postgres"
     )
 
+
+
 # ========== ROUTES D'AUTHENTIFICATION ==========
+
 
 @app.route('/', methods=['POST'])
 def login():
-    data = request.json 
+    data = request.json
     email = data.get('email')
     password = data.get('password')
 
     try:
         con = connect_db()
         cur = con.cursor()
-        
         cur.execute("SELECT * FROM utilisateur WHERE email = %s", (email,))
         user = cur.fetchone()
-
         cur.close()
         con.close()
 
-        if user:
-            mot_de_passe_hash = user[3] 
-            if bcrypt.checkpw(password.encode('utf-8'), mot_de_passe_hash.encode('utf-8')):
-                return jsonify({
-                    "message": "login successful",
-                    "user": {
-                        "id": user[0],
-                        "nom": user[1],
-                        "email": user[2],
-                        "role": user[4]
-                    }
-                })
-            else:
-                return jsonify({"error": "Mot de passe incorrect"}), 401
+        if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
+            session['user_id'] = user[0]
+            session['user_role'] = user[4]  # admin / technicien / client
+            return jsonify({
+                "message": "login successful",
+                "user": {
+                    "id": user[0],
+                    "nom": user[1],
+                    "email": user[2],
+                    "role": user[4]
+                }
+            })
         else:
-            return jsonify({"error": "Utilisateur non trouvé"}), 401
-
+            return jsonify({"error": "Email ou mot de passe incorrect"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -517,21 +565,77 @@ def get_utilisateur(id):
         })
     else:
         return jsonify({'message': 'Utilisateur non trouvé'}), 404
+    
 
 @app.route('/modifierUtilisateur/<id>', methods=['PUT'])
 def modifier_utilisateur(id):
-    data = request.json
-    conn = connect_db()
-    cur = conn.cursor()
-    cur.execute("""
-        UPDATE utilisateur
-        SET nom = %s, email = %s, role = %s
-        WHERE id = %s
-    """, (data['nom'], data['email'], data['role'], id))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'message': 'Utilisateur modifié avec succès'})
+    conn = None
+    cur = None
+    try:
+        # Validate request data
+        data = request.get_json()
+        if not data:
+            response = jsonify({'error': 'Données JSON manquantes'})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 400
+        
+        # Validate required fields
+        required_fields = ['nom', 'email', 'role']
+        for field in required_fields:
+            if field not in data or not data[field].strip():
+                response = jsonify({'error': f'Le champ {field} est requis'})
+                response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+                return response, 400
+        
+        conn = connect_db()
+        cur = conn.cursor()
+        
+        # Update user
+        cur.execute("""
+            UPDATE utilisateur
+            SET nom = %s, email = %s, role = %s
+            WHERE id = %s
+        """, (data['nom'].strip(), data['email'].strip(), data['role'].strip(), id))
+        
+        conn.commit()
+
+        if cur.rowcount == 0:
+            response = jsonify({'error': 'Utilisateur introuvable'})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 404
+
+        response = jsonify({'message': 'Utilisateur modifié avec succès'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+
+    except errors.UniqueViolation as e:
+        if conn:
+            conn.rollback()
+        response = jsonify({'error': 'Cet email est déjà utilisé'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 400
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Erreur lors de la modification: {str(e)}")  # For debugging
+        response = jsonify({'error': f'Erreur serveur: {str(e)}'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
 
 @app.route("/ticketsParMois")
 def tickets_par_mois():

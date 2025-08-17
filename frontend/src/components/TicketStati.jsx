@@ -5,7 +5,7 @@ const TicketStati = () => {
   const [ticketStati, setTicketStati] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/admin")
+    fetch("http://localhost:5000/admin" , {credentials: 'include',})
       .then((res) => res.json())
       .then((data) => {
         setTicketStati(data.ticketStati || []);

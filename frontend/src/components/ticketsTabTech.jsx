@@ -13,7 +13,7 @@ const TicketsTabTech = () => {
     dateCreation: "",
   });
   const [loading, setLoading] = useState(true);
-  const technicienId = localStorage.getItem("technicien_id");
+  const technicienId = localStorage.getItem("user_id");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +22,7 @@ const TicketsTabTech = () => {
       return;
     }
 
-    fetch(`http://localhost:5000/ticketsTechnicien?technicien_id=${technicienId}`)
+    fetch(`http://localhost:5000/ticketsTechnicien?technicien_id=${technicienId}` , {credentials: 'include',})
       .then((res) => res.json())
       .then((data) => {
         setTickets(data || []);

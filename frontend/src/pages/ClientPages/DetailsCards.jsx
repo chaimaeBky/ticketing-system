@@ -18,7 +18,7 @@ const DetailsCards = () => {
   useEffect(() => {
     const fetchTicketDetails = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`);
+        const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`,{credentials: 'include',});
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -47,7 +47,7 @@ const DetailsCards = () => {
   const fetchAttachments = async () => {
     try {
       console.log(`🔍 Récupération des pièces jointes pour le ticket ${ticketId}`);
-      const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`);
+      const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`,{credentials: 'include',});
       
       if (response.ok) {
         const data = await response.json();
@@ -106,6 +106,7 @@ const DetailsCards = () => {
         // 🔥 FIX: Use full URL with proper endpoint
         const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`, {
           method: 'POST',
+          credentials: "include",
           body: formData,
           // Ne pas définir Content-Type, le navigateur le fera automatiquement
         });
@@ -153,7 +154,7 @@ const DetailsCards = () => {
       console.log(`📥 Téléchargement de ${fileName} (ID: ${attachmentId})`);
       
       const response = await fetch(
-        `${API_BASE_URL}/api/tickets/${ticketId}/attachments/${attachmentId}`
+        `${API_BASE_URL}/api/tickets/${ticketId}/attachments/${attachmentId}`,{credentials: 'include',}
       );
       
       if (!response.ok) {
