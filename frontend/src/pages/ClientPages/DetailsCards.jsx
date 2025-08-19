@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NavBarClient from '../../components/NavBarClient';
 
+
 const DetailsCards = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
@@ -256,6 +257,7 @@ const DetailsCards = () => {
   }
 
   return (
+    
     <div className="min-h-screen dashboard-container bg-custom">
       {/* Background pattern */}
       <div className="dashboard-background">
@@ -428,6 +430,7 @@ const DetailsCards = () => {
         </div>
       </main>
     </div>
+    
   );
 };
 

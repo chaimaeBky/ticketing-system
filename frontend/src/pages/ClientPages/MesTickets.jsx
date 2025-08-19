@@ -5,6 +5,7 @@ import '../../ClientCSS/Dashboard.css';
 import '../../background.css';
 import TicketCard from '../../components/TicketCard';
 
+
 const MesTickets = () => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
@@ -175,6 +176,7 @@ const MesTickets = () => {
   }
 
   return (
+  
     <div className="min-h-screen dashboard-container bg-custom">
       {/* Background pattern */}
       <div className="dashboard-background">
@@ -353,6 +355,7 @@ const MesTickets = () => {
         )}
       </main>
     </div>
+   
   );
 };
 

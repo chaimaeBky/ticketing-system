@@ -3,6 +3,7 @@ import NavBarClient from '../../components/NavBarClient';
 import TicketCard from '../../components/TicketCard';
 import '../../ClientCSS/Dashboard.css';
 import '../../background.css';
+import ChatBot from '../../components/ChatBot';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 
@@ -77,7 +78,9 @@ useEffect(() => {
   }
 
   return (
+     <>
     <div className="min-h-screen  dashboard-container bg-custom">
+    
       {/* Background pattern */}
       <div className="dashboard-background">
         <div className="map-pattern"></div>
@@ -145,7 +148,11 @@ useEffect(() => {
           </div>
         </div>
       </main>
+       
     </div>
+    <ChatBot />
+  </>
+
   );
 };
 

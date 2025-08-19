@@ -1,0 +1,177 @@
+{
+  "questions": [
+    {
+      "question": "bonjour",
+      "answer": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"
+    },
+    {
+      "question": "salut",
+      "answer": "Salut ! Que puis-je faire pour vous ?"
+    },
+    {
+      "question": "bonsoir",
+      "answer": "Bonsoir ! Comment puis-je vous assister ce soir ?"
+    },
+    {
+      "question": "comment ça va",
+      "answer": "Je vais bien, merci ! Et vous ?"
+    },
+    {
+      "question": "quel est votre nom",
+      "answer": "Je suis le chatbot de TirsoSupport, votre assistant virtuel."
+    },
+    {
+      "question": "qui êtes-vous",
+      "answer": "Je suis votre assistant virtuel de TirsoSupport, ici pour vous aider avec vos questions."
+    },
+    {
+      "question": "aide",
+      "answer": "Bien sûr ! Dites-moi sur quoi vous avez besoin d'aide. Je peux vous assister avec vos tickets, problèmes techniques, ou questions générales."
+    },
+    {
+      "question": "problème technique",
+      "answer": "Je comprends que vous avez un problème technique. Pouvez-vous me donner plus de détails ? Par exemple, s'agit-il d'un problème de connexion, d'application, ou autre chose ?"
+    },
+    {
+      "question": "ticket",
+      "answer": "Pour gérer vos tickets, vous pouvez : créer un nouveau ticket depuis votre dashboard, consulter vos tickets existants, ou suivre le statut de vos demandes."
+    },
+    {
+      "question": "créer ticket",
+      "answer": "Pour créer un nouveau ticket, cliquez sur le bouton 'Créer nouveau ticket' dans votre dashboard ou naviguez vers la section création de tickets."
+    },
+    {
+      "question": "statut ticket",
+      "answer": "Vous pouvez vérifier le statut de vos tickets directement depuis votre dashboard. Chaque ticket affiche son statut actuel : ouvert, en cours, ou résolu."
+    },
+    {
+      "question": "connexion",
+      "answer": "Si vous avez des problèmes de connexion, vérifiez vos identifiants et votre connexion internet. Si le problème persiste, créez un ticket de support."
+    },
+    {
+      "question": "mot de passe",
+      "answer": "Pour réinitialiser votre mot de passe, utilisez l'option 'Mot de passe oublié' sur la page de connexion ou contactez notre support."
+    },
+    {
+      "question": "compte",
+      "answer": "Pour les questions liées à votre compte (modification d'informations, suppression, etc.), vous pouvez créer un ticket ou accéder aux paramètres de votre profil."
+    },
+    {
+      "question": "urgence",
+      "answer": "Pour les problèmes urgents, créez un ticket en précisant le niveau de priorité 'Urgent'. Notre équipe traitera votre demande en priorité."
+    },
+    {
+      "question": "délai réponse",
+      "answer": "Nos délais de réponse varient selon la priorité : tickets urgents (2-4h), normaux (24-48h), faible priorité (72h). Vous recevrez une notification dès qu'il y a une mise à jour."
+    },
+    {
+      "question": "équipe support",
+      "answer": "Notre équipe de support technique est disponible pour vous aider. Créez un ticket détaillé pour obtenir une assistance personnalisée."
+    },
+    {
+      "question": "horaires",
+      "answer": "Notre support est disponible 24h/7j via le système de tickets. Les réponses sont traitées selon nos délais standards basés sur la priorité."
+    },
+    {
+      "question": "bug",
+      "answer": "Si vous avez trouvé un bug, merci de créer un ticket en décrivant : les étapes pour reproduire le problème, votre navigateur/système, et des captures d'écran si possible."
+    },
+    {
+      "question": "fonctionnalité",
+      "answer": "Pour des questions sur les fonctionnalités ou demandes d'amélioration, créez un ticket de type 'Demande de fonctionnalité' avec une description détaillée."
+    },
+    {
+      "question": "sécurité",
+      "answer": "Pour les questions de sécurité, créez un ticket prioritaire. Nous prenons la sécurité très au sérieux et traiterons votre demande rapidement."
+    },
+    {
+      "question": "performance",
+      "answer": "Si vous rencontrez des problèmes de performance (lenteur, etc.), créez un ticket en précisant votre navigateur, système d'exploitation et une description du problème."
+    },
+    {
+      "question": "mobile",
+      "answer": "Pour les problèmes sur mobile, précisez votre appareil et système (iOS/Android) lors de la création de votre ticket de support."
+    },
+    {
+      "question": "navigateur",
+      "answer": "Nous recommandons d'utiliser les dernières versions de Chrome, Firefox, Safari ou Edge. Si vous avez des problèmes, essayez un autre navigateur ou videz votre cache."
+    },
+    {
+      "question": "données",
+      "answer": "Pour les questions concernant vos données (export, suppression, confidentialité), créez un ticket de type 'Données personnelles'."
+    },
+    {
+      "question": "formation",
+      "answer": "Pour des questions sur l'utilisation de la plateforme ou besoin de formation, créez un ticket de type 'Question générale' et notre équipe vous guidera."
+    },
+    {
+      "question": "facturation",
+      "answer": "Pour les questions de facturation ou abonnement, créez un ticket de type 'Facturation' avec les détails de votre demande."
+    },
+    {
+      "question": "comment utiliser",
+      "answer": "Pour apprendre à utiliser une fonctionnalité spécifique, créez un ticket avec votre question détaillée ou consultez notre documentation."
+    },
+    {
+      "question": "erreur",
+      "answer": "Si vous rencontrez une erreur, notez le message d'erreur exact et créez un ticket en incluant cette information avec une capture d'écran si possible."
+    },
+    {
+      "question": "lent",
+      "answer": "Si le système est lent, essayez de vider votre cache navigateur, redémarrer votre connexion, ou créez un ticket si le problème persiste."
+    },
+    {
+      "question": "merci",
+      "answer": "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions."
+    },
+    {
+      "question": "au revoir",
+      "answer": "Au revoir ! Passez une bonne journée et n'hésitez pas à revenir si vous avez besoin d'aide."
+    },
+    {
+      "question": "à bientôt",
+      "answer": "À bientôt ! Je serai là quand vous aurez besoin d'assistance."
+    },
+    {
+      "question": "contact",
+      "answer": "Pour nous contacter directement, créez un ticket via votre dashboard ou envoyez-nous un email à support@tirso.com."
+    },
+    {
+      "question": "paiement",
+      "answer": "Pour les questions liées au paiement, assurez-vous que votre transaction est validée et créez un ticket si vous rencontrez un problème."
+    },
+    {
+      "question": "remboursement",
+      "answer": "Pour demander un remboursement, créez un ticket détaillant votre commande et la raison du remboursement."
+    },
+    {
+      "question": "installation",
+      "answer": "Si vous avez besoin d'aide pour l'installation, indiquez votre système d'exploitation et suivez les instructions disponibles dans notre documentation ou créez un ticket."
+    },
+    {
+      "question": "mise à jour",
+      "answer": "Pour savoir si une mise à jour est disponible, vérifiez la section 'Mises à jour' de votre dashboard ou créez un ticket si vous rencontrez un problème."
+    },
+    {
+      "question": "compatibilité",
+      "answer": "Pour des questions de compatibilité (logiciels, appareils), précisez votre configuration exacte dans un ticket et notre équipe vous répondra."
+    },
+    {
+      "question": "réinitialisation",
+      "answer": "Pour réinitialiser vos paramètres ou votre compte, utilisez l'option correspondante dans votre dashboard ou créez un ticket."
+    },
+    {
+      "question": "plan abonnement",
+      "answer": "Pour connaître les différents plans et tarifs, consultez la section 'Abonnements' de votre compte ou créez un ticket pour des questions spécifiques."
+    },
+    {
+      "question": "problème logiciel",
+      "answer": "Si vous rencontrez un problème avec le logiciel, créez un ticket en indiquant les étapes pour reproduire le problème et votre configuration."
+    },
+    {
+      "question": "suggestion",
+      "answer": "Pour nous faire part de vos suggestions ou idées d'amélioration, créez un ticket de type 'Suggestion' avec tous les détails."
+    }
+
+  ]
+}

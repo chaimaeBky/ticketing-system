@@ -3,6 +3,7 @@ import psycopg2
 import bcrypt
 from flask_cors import CORS
 from psycopg2.extras import RealDictCursor
+from psycopg2 import errors
 import os
 from datetime import datetime
 import logging
@@ -13,19 +14,15 @@ import logging
 import traceback
 import textwrap
 import os
+import json
 
 
 
 
-app = Flask(__name__)
-app.secret_key = 'supersecret'
-from flask import Flask, request, jsonify, session
-from flask_cors import CORS
-import psycopg2
-from psycopg2 import errors
 
 app = Flask(__name__)
-app.secret_key = 'supersecret'
+app.secret_key = os.urandom(24) 
+
 
 CORS(app,
      origins=["http://localhost:5173"],  
@@ -82,10 +79,10 @@ def send_assignment_email(technicien_info, ticket_info, ticket_id):
     Fonction pour envoyer l'email d'assignation avec debugging complet
     """
     print("=" * 50)
-    print("🔄 DÉBUT DE L'ENVOI D'EMAIL")
-    print(f"📊 Ticket ID: {ticket_id}")
-    print(f"👤 Technicien: {technicien_info}")
-    print(f"🎫 Ticket Info: {ticket_info}")
+    print(" DÉBUT DE L'ENVOI D'EMAIL")
+    print(f" Ticket ID: {ticket_id}")
+    print(f" Technicien: {technicien_info}")
+    print(f" Ticket Info: {ticket_info}")
     
     try:
         technicien_nom = technicien_info[0] if technicien_info[0] else "Technicien"
@@ -103,7 +100,6 @@ def send_assignment_email(technicien_info, ticket_info, ticket_id):
         
         print(" Validation email OK")
         
-        # Test de la configuration mail
         print(f" Configuration Mail:")
         print(f"   Server: {app.config.get('MAIL_SERVER')}")
         print(f"   Port: {app.config.get('MAIL_PORT')}")
@@ -141,7 +137,6 @@ def send_assignment_email(technicien_info, ticket_info, ticket_id):
         print(f" Expéditeur: {msg.sender}")
         print(f" Sujet: {msg.subject}")
         
-        # Tentative d'envoi
         print(" Tentative d'envoi...")
         
         with app.app_context():
@@ -162,9 +157,10 @@ def send_assignment_email(technicien_info, ticket_info, ticket_id):
 
     
 
-# Configuration des logs
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+
 
 DB_CONFIG = {
     'host': 'localhost',
@@ -172,9 +168,6 @@ DB_CONFIG = {
     'user': 'postgres',
     'password': 'postgres' 
 }
-
-
-
 
 def get_db_connection():
     """Fonction unique pour toute l'application"""
@@ -1650,6 +1643,20 @@ def test_email_config():
     
 
 
+with open("chat_data.json", "r", encoding="utf-8") as f:
+    chat_data = json.load(f)["questions"]
+
+@app.route("/chatbot", methods=["POST"])
+def chatbot():
+    data = request.json
+    user_msg = data.get("message", "").lower().strip()
+    
+    for qa in chat_data:
+        if qa["question"] in user_msg:
+            return jsonify({"reply": qa["answer"]})
+    
+    return jsonify({"reply": "Désolé, je n'ai pas compris. Pouvez-vous reformuler ?"})
+    
 if __name__ == '__main__':
     os.makedirs('uploads/tickets', exist_ok=True)
     app.run(debug=True, host='127.0.0.1', port=5000)

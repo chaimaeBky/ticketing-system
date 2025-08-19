@@ -148,6 +148,7 @@ if (response.ok && data.success) {
 };
 
   return (
+    
     <div className="min-h-screen  dashboard-container bg-custom">
       {/* Background pattern */}
       <div className="dashboard-background">
@@ -305,6 +306,7 @@ if (response.ok && data.success) {
         </div>
       </main>
     </div>
+   
   );
 };
 
