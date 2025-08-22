@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "../services/axiosInstance";
 import '../index.css';
 
 const AdminMenu = () => {
@@ -7,8 +8,20 @@ const AdminMenu = () => {
   const location = useLocation();
   const pathname = location.pathname;
 
-  const logOut = () => {
-    navigate('/');
+  const logOut = async () => {
+    try {
+      // Appel au backend pour supprimer la session
+      await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+      
+      // Supprimer les infos locales
+      localStorage.removeItem('user');
+      localStorage.removeItem('user_id');
+      
+      // Redirection vers la page login
+      navigate('/');
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion :", err);
+    }
   };
 
   const linkClass = (path) =>

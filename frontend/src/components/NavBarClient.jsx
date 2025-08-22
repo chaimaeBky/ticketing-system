@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/images/logo.jpg';
 import '../index.css';
+import axios from "../services/axiosInstance";
+
 
 const NavBarClient = () => {
   const navigate = useNavigate();
@@ -29,9 +31,18 @@ const NavBarClient = () => {
     navigate('/client/create-ticket');
   };
 
-  const logOut = () => {
+  const logOut = async () => {
+  try {
+    await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+
+    localStorage.removeItem('user');
+    localStorage.removeItem('user_id');
+
     navigate('/');
-  };
+  } catch (err) {
+    console.error("Erreur lors de la déconnexion :", err);
+  }
+};
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md py-2 shadow-md">

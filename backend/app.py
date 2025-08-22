@@ -15,6 +15,8 @@ import traceback
 import textwrap
 import os
 import json
+from datetime import timedelta
+
 
 
 
@@ -22,6 +24,7 @@ import json
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24) 
+app.permanent_session_lifetime = timedelta(minutes=90)
 
 
 CORS(app,
@@ -33,7 +36,10 @@ CORS(app,
 )
 
 @app.before_request
-def handle_preflight():
+def before_request():
+    public_routes = ["/register", "/"]  # routes accessibles sans login
+    
+    # Gestion des requêtes OPTIONS pour CORS
     if request.method == "OPTIONS":
         response = jsonify({'status': 'OK'})
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
@@ -42,21 +48,14 @@ def handle_preflight():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
 
-@app.before_request
-def require_login():
-    public_routes = ["/register", "/"]
-    
-    if request.method == "OPTIONS":
-        return
-        
-    if request.path in public_routes or request.path.startswith("/static/"):
-        return
-        
-    if 'user_id' not in session:
-        response = jsonify({'error': 'Utilisateur non connecté'})
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response, 401
+    # Protection des routes
+    if request.path not in public_routes and not request.path.startswith("/static/"):
+        if 'user_id' not in session:
+            response = jsonify({'error': 'Utilisateur non connecté'})
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 401
+
 
 
     
@@ -205,6 +204,7 @@ def login():
         con.close()
 
         if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
+            session.permanent = True
             session['user_id'] = user[0]
             session['user_role'] = user[4]  
             return jsonify({
@@ -220,6 +220,18 @@ def login():
             return jsonify({"error": "Email ou mot de passe incorrect"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()  
+    return jsonify({"message": "Déconnecté avec succès"})
+
+
+@app.route("/check-session")
+def check_session():
+    if "user_id" in session:
+        return jsonify({"status": "ok"}), 200
+    return jsonify({"error": "non connecté"}), 401
 
 
 @app.route('/register', methods=['POST'])

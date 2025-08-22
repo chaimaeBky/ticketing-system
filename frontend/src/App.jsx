@@ -30,25 +30,32 @@ const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <Route>
+        {/* Routes publiques */}
         <Route path='/' element={<Login />} />
         <Route path='/register' element={<Register />} />
 
-        <Route element={<PrivateRoute />}>
+        {/* Admin */}
+        <Route element={<PrivateRoute allowedRoles={['admin']} />}>
           <Route path='/admin' element={<Admin />} />
-          <Route path='/technicien' element={<Technicien />} />
-
-          <Route path='/client/dashboard' element={<DashboardClient />} />
-          <Route path='/client/ticket/:ticketId' element={<DetailsCards />} />
-          <Route path='/client/create-ticket' element={<CreateTicket />} />
-          <Route path='/client/mes-tickets' element={<MesTickets />} />
-
           <Route path='/Statistiques' element={<Statistiques />} />
           <Route path='/TicketsAdmin' element={<TicketsAdmin />} />
           <Route path='/UtilisateurAdmin' element={<UtilisateurAdmin />} />
           <Route path='/modifier/:id' element={<ModifierUtilisateur />} />
           <Route path='/ajouterUtilisateurAdmin' element={<AjouterUtilisateurAdmin />} />
+        </Route>
 
+        {/* Technicien */}
+        <Route element={<PrivateRoute allowedRoles={['technicien']} />}>
+          <Route path='/technicien' element={<Technicien />} />
           <Route path='/ticketDetailsTech/:id' element={<TicketDetailsTech />} />
+        </Route>
+
+        {/* Client */}
+        <Route element={<PrivateRoute allowedRoles={['client']} />}>
+          <Route path='/client/dashboard' element={<DashboardClient />} />
+          <Route path='/client/ticket/:ticketId' element={<DetailsCards />} />
+          <Route path='/client/create-ticket' element={<CreateTicket />} />
+          <Route path='/client/mes-tickets' element={<MesTickets />} />
         </Route>
       </Route>
     )

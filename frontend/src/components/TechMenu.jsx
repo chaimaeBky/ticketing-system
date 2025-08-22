@@ -1,25 +1,30 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import axios from "../services/axiosInstance"; // à installer si ce n'est pas déjà fait
 import '../index.css';
 
 const TechMenu = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
 
-  const logOut = () => {
-    navigate('/');
+  const logOut = async () => {
+    try {
+      // Appel au backend pour supprimer la session
+      await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+
+      // Supprimer les infos locales
+      localStorage.removeItem('user');
+      localStorage.removeItem('user_id');
+
+      // Redirection vers login
+      navigate('/');
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion :", err);
+    }
   };
-
- 
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md py-2 shadow-md">
       <div className="container mx-auto flex justify-between items-center px-4">
-        <ul className="flex items-center gap-10">
-          
-        </ul>
-
         <div className="absolute left-1/2 transform -translate-x-1/2">
           <img
             src="../src/assets/images/logo.png"
@@ -29,7 +34,6 @@ const TechMenu = () => {
         </div>
 
         <ul className="flex items-center gap-12">
-          
           <li className="ml-8">
             <button
               type="button"

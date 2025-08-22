@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../services/axiosInstance";
 import { FaTicketAlt } from "react-icons/fa";
 
 const TotalTickets = () => {
