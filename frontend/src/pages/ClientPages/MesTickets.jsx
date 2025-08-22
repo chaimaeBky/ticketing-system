@@ -167,7 +167,7 @@ const MesTickets = () => {
         <NavBarClient onLogout={handleLogout} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-800 mx-auto"></div>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-800 mt-20  mx-auto"></div>
             <p className="text-gray-600 mt-4">Chargement des tickets...</p>
           </div>
         </div>
@@ -193,7 +193,7 @@ const MesTickets = () => {
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
         {/* En-tête */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-red-800 mb-2">
+          <h1 className="text-3xl font-bold mt-20 text-red-800 mb-2">
             Mes tickets
           </h1>
           <p className="text-xl font-bold text-gray-600 mb-1">

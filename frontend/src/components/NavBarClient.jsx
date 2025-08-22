@@ -1,23 +1,20 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// Import du logo
-import logo from '../assets/images/logo.jpg'; // Ajuste le chemin selon ta structure
+import logo from '../assets/images/logo.jpg';
+import '../index.css';
 
 const NavBarClient = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const pathname = location.pathname;
 
-  // Fonction pour déterminer si un lien est actif
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
-
-  // Fonction pour obtenir la classe CSS selon l'état actif
-  const getLinkClass = (path) => {
-    return isActive(path) 
-      ? "text-red-800 font-medium transition-colors" 
-      : "text-gray-700 hover:text-gray-900 font-medium transition-colors";
-  };
+  // Fonction pour obtenir la classe CSS selon l'état actif (même style qu'AdminMenu)
+  const linkClass = (path) =>
+    `px-4 py-2 transition-colors duration-200 text-lg ${
+      pathname === path
+        ? "font-bold text-[#8f1630]"
+        : "font-normal text-black hover:text-[#a83b52]"
+    }`;
 
   // Handlers pour la navigation
   const handleAccueil = () => {
@@ -32,56 +29,80 @@ const NavBarClient = () => {
     navigate('/client/create-ticket');
   };
 
+  const logOut = () => {
+    navigate('/');
+  };
+
   return (
-    <header className="bg-white shadow-sm border-b">
-      <div className="max-w-6xl mx-auto px-6 py-4">
-        <nav className="flex items-center justify-between">
-          
-          {/* Navigation gauche */}
-          <div className="flex items-center space-x-20 flex-1">
-            <button 
-              onClick={handleAccueil}
-              className={getLinkClass('/client/dashboard')}
+    <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md py-2 shadow-md">
+      <div className="container mx-auto flex justify-between items-center px-4">
+        {/* Navigation gauche */}
+        <ul className="flex items-center gap-10">
+          <li>
+            <a 
+              href="/client/dashboard"
+              onClick={(e) => {
+                e.preventDefault();
+                handleAccueil();
+              }}
+              className={linkClass('/client/dashboard')}
             >
               Accueil
-            </button>
-            <button 
-              onClick={handleMesTickets}
-              className={getLinkClass('/client/mes-tickets')}
+            </a>
+          </li>
+          <li>
+            <a 
+              href="/client/mes-tickets"
+              onClick={(e) => {
+                e.preventDefault();
+                handleMesTickets();
+              }}
+              className={linkClass('/client/mes-tickets')}
             >
               Mes tickets
-            </button>
-          </div>
-          
-          {/* Logo centré */}
-          <div className="flex-1 flex justify-center">
-            <img
-              src={logo}
-              alt="TIRIO Logistics and Transport"
-              className="h-12 w-auto cursor-pointer"
-              onClick={handleAccueil}
-            />
-          </div>
-          
-          {/* Boutons droite */}
-          <div className="flex items-center space-x-20 flex-1 justify-end">
-            <button 
-              onClick={handleNouveauTicket}
-              className={getLinkClass('/client/create-ticket')}
+            </a>
+          </li>
+        </ul>
+
+        {/* Logo centré */}
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <img
+            src={logo}
+            alt="Logo"
+            className="h-10 w-auto"
+            onClick={handleAccueil}
+          />
+        </div>
+
+        {/* Navigation droite */}
+        <ul className="flex items-center gap-12">
+          <li>
+            <a 
+              href="/client/create-ticket"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNouveauTicket();
+              }}
+              className={linkClass('/client/create-ticket')}
             >
               Nouveau ticket
-            </button>
-            <button 
-              onClick={() => navigate('/')}
-              className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors font-medium"
+            </a>
+          </li>
+          <li className="ml-8">
+            <button
+              type="button"
+              style={{ backgroundColor: "#8f1630" }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#a83b52")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#8f1630")}
+              onClick={logOut}
+              className="text-white px-4 py-2 rounded font-semibold transition text-md"
             >
               Déconnexion
             </button>
-
-          </div>
-        </nav>
+          </li>
+        </ul>
       </div>
-    </header>
+    </nav>
   );
 };
 

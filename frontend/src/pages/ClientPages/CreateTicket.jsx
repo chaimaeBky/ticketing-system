@@ -19,7 +19,7 @@ const CreateTicket = () => {
   useEffect(() => {
   const user = localStorage.getItem('user');
   if (!user) {
-    navigate('/login');
+    navigate('/');
   }
 }, [navigate]);
   // Options pour le sujet (ENUM sujet_ticket)
@@ -144,7 +144,7 @@ if (response.ok && data.success) {
 
   const handleLogout = () => {
   localStorage.removeItem('user');
-  navigate('/login');
+  navigate('/');
 };
 
   return (
@@ -166,7 +166,7 @@ if (response.ok && data.success) {
         <div className="w-full max-w-xl">
           {/* Titre */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-red-800 mb-2">
+            <h1 className="text-2xl font-bold text-red-800 mt-20 mb-2">
               Formulaire de réclamation
             </h1>
           </div>

@@ -23,7 +23,7 @@ const fetchTickets = async () => {
     
     if (!clientId) {
       console.error('Utilisateur non connecté');
-      navigate('/login');
+      navigate('/');
       return;
     }
     
@@ -98,7 +98,7 @@ useEffect(() => {
           {/* Compteur de tickets centré */}
           <div className="text-center mb-8">
             
-            <h2 className="text-2xl font-medium text-gray-700 mb-2">
+            <h2 className="text-2xl font-medium text-gray-700 mt-20 mb-2">
               Nombre total de tickets :
             </h2>
             <div className="text-5xl font-bold text-red-800">

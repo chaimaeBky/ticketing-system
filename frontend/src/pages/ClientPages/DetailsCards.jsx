@@ -240,7 +240,7 @@ const DetailsCards = () => {
     return (
       <div className="min-h-screen bg-custom">
         <NavBarClient onNewTicket={handleNewTicket} onLogout={handleLogout} />
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center mt-20 justify-center h-64">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error || 'Ticket non trouvé'}</p>
             <button 
@@ -274,7 +274,7 @@ const DetailsCards = () => {
       <main className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] px-6">
         <div className="w-full max-w-4xl">
           {/* Back button */}
-          <div className="mb-6">
+          <div className="mb-6 mt-20 ">
             <button 
               onClick={handleBackToDashboard}
               className="text-lg font-bold" 
