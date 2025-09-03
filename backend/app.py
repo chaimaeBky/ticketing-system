@@ -18,12 +18,8 @@ import json
 from datetime import timedelta
 
 
-
-
-
-
 app = Flask(__name__)
-app.secret_key = os.urandom(24) 
+app.secret_key = os.environ.get("SECRET_KEY", "supersecret123") 
 app.permanent_session_lifetime = timedelta(minutes=90)
 
 
