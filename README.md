@@ -19,14 +19,14 @@
 
 ###  Multi-Role System
 - **Clients:** Ticket creation, real-time tracking, file attachments
-- **Technicians:** Assignment management, resolution workflow, internal collaboration
+- **Technicians:** Assignment management, resolution workflow
 - **Administrators:** Global oversight, user management, advanced analytics
 
 ###  Core Capabilities
 -  **Real-time Dashboard** - Live metrics and performance indicators
 -  **AI-Powered Chatbot** - Intelligent virtual assistant for instant client support
 -  **Smart Notifications** - Automated email alerts for status changes
--  **File Management** - Drag & drop attachments with validation
+-  **File Management** - Upload attachments with validation
 -  **Advanced Analytics** - Performance reports and trend analysis
 -  **Role-Based Access** - Secure multi-level permissions
 
