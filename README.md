@@ -51,17 +51,30 @@
 ### Authentication & Dashboard
 | Login Interface | Client Dashboard |
 |-----------------|------------------|
-| ![Login](https://via.placeholder.com/400x250?text=Login+Page) | ![Dashboard](https://via.placeholder.com/400x250?text=Client+Dashboard) |
-
-### Ticket Management
-| Create Ticket | Ticket Details |
-|---------------|----------------|
-| ![Create](https://via.placeholder.com/400x250?text=Create+Ticket) | ![Details](https://via.placeholder.com/400x250?text=Ticket+Details) |
+| ![Login](screens/login.jpg) | ![Dashboard](screens/clientAcceuil.jpg) |
 
 ### Admin Interface
 | Admin Dashboard | User Management |
 |-----------------|-----------------|
-| ![Admin](https://via.placeholder.com/400x250?text=Admin+Dashboard) | ![Users](https://via.placeholder.com/400x250?text=User+Management) |
+| ![Admin](screens/acceuilAdmin.jpg) | ![Users](screens/adminUser.jpg) |
+
+### Ticket Management
+| Create Ticket | Ticket Details |
+|---------------|----------------|
+| ![Create](screens/clientCreerTicket.jpg) | ![Details](screens/clientDetail.jpg) |
+
+### Technician Interface 
+| Technician Dashboard | Ticket View |
+|----------------------|------------------------|
+| ![Technicien](screens/techAcceuil.jpg) | ![Ticket](screens/techDetail.jpg) |
+
+### Informing emails 
+| Technician  | Client |
+|-------------|--------|
+| ![Technicien](screens/changerEtatTechEMail.jpg) | ![Client](screens/ticketCreerMail.jpg) |
+
+
+
 
 `
 
