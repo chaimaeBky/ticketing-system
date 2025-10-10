@@ -42,7 +42,7 @@
     },
     {
       "question": "statut ticket",
-      "answer": "Vous pouvez vérifier le statut de vos tickets directement depuis votre dashboard. Chaque ticket affiche son statut actuel : ouvert, en cours, ou résolu."
+      "answer": "Vous pouvez vérifier le statut de vos tickets directement depuis votre dashboard. Chaque ticket affiche son statut actuel : fermé , ouvert, en cours, ou résolu."
     },
     {
       "question": "connexion",
