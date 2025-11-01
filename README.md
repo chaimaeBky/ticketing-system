@@ -43,7 +43,6 @@
 
 ### Database & Infrastructure
 - **PostgreSQL** - Robust relational database system
-- **Docker** - Containerization for consistent deployment
 - **RESTful API** - Clean, scalable architecture
 
 ## 📸 Screenshots / Captures d'écran
